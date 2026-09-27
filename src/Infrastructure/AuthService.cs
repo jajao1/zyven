@@ -40,6 +40,7 @@ public sealed class AuthService(ZyvenDbContext db, IPasswordHasher<User> passwor
     {
         var session = new AuthSession { User = user, UserId = user.Id, ExpiresAt = Now.AddDays(30) };
         var raw = CreateRefresh(); db.Sessions.Add(session); db.RefreshTokens.Add(new() { Hash = Hash(raw), Session = session });
+        Audit(session, "session.created");
         await db.SaveChangesAsync(ct); return Grant(session, user, raw);
     }
     public async Task<AuthGrant?> Refresh(string raw, CancellationToken ct)
@@ -50,11 +51,12 @@ public sealed class AuthService(ZyvenDbContext db, IPasswordHasher<User> passwor
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
         var sessionId = await db.RefreshTokens.Where(x => x.Hash == hash).Select(x => (Guid?)x.SessionId).SingleOrDefaultAsync(ct);
         if (sessionId is null) return null;
-        var session = await db.Sessions.FromSqlInterpolated($"SELECT * FROM \"Sessions\" WHERE \"Id\" = {sessionId.Value} FOR UPDATE").SingleAsync(ct);
+        var session = await db.Sessions.FromSqlInterpolated($"SELECT * FROM \"Sessions\" WHERE \"Id\" = {sessionId.Value} FOR UPDATE").SingleOrDefaultAsync(ct);
+        if (session is null) return null; // Cleanup may have removed an expired family after token lookup.
         var token = await db.RefreshTokens.SingleAsync(x => x.Hash == hash, ct);
         if (token.ConsumedAt is not null)
         {
-            session.RevokedAt = Now; await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct); return null;
+            session.RevokedAt = Now; Audit(session, "session.revoked.replay"); await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct); return null;
         }
         if (session.RevokedAt is not null || session.ExpiresAt <= Now) return null;
         token.ConsumedAt = Now;
@@ -67,9 +69,10 @@ public sealed class AuthService(ZyvenDbContext db, IPasswordHasher<User> passwor
     {
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
         var session = await db.Sessions.FromSqlInterpolated($"SELECT * FROM \"Sessions\" WHERE \"Id\" = {sessionId} FOR UPDATE").SingleOrDefaultAsync(ct);
-        if (session is not null) { session.RevokedAt = Now; await db.SaveChangesAsync(ct); }
+        if (session is not null) { session.RevokedAt = Now; Audit(session, "session.revoked.logout"); await db.SaveChangesAsync(ct); }
         await transaction.CommitAsync(ct);
     }
+    private void Audit(AuthSession session, string action) => db.AuthEvents.Add(new() { UserId = session.UserId, SessionId = session.Id, Action = action, OccurredAt = Now });
     private AuthGrant Grant(AuthSession session, User user, string refresh)
     {
         var now = Now;
@@ -79,3 +82,5 @@ public sealed class AuthService(ZyvenDbContext db, IPasswordHasher<User> passwor
         return new(new(new JwtSecurityTokenHandler().WriteToken(jwt), new(user.Id, user.Email, user.DisplayName)), refresh, session.ExpiresAt);
     }
 }
+
+

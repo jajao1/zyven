@@ -1,3 +1,5 @@
+using System.Net;
+using Microsoft.AspNetCore.HttpOverrides;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -47,9 +49,21 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
         }
     };
 });
+var proxies = builder.Configuration.GetSection("ReverseProxy:KnownProxies").Get<string[]>() ?? [];
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.ForwardLimit = 1;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+    foreach (var proxy in proxies) options.KnownProxies.Add(IPAddress.Parse(proxy));
+    // An empty list trusts every proxy, so keep a non-routable sentinel when proxying is disabled.
+    if (proxies.Length == 0) options.KnownProxies.Add(IPAddress.None);
+});
 builder.Services.AddAuthorization(); builder.Services.AddProblemDetails(); builder.Services.AddOpenApi();
 var app = builder.Build();
 app.UseExceptionHandler();
+app.UseForwardedHeaders();
 app.Use(async (context, next) =>
 {
     // Generate the identifier server-side; never reflect untrusted header data into logs.
@@ -60,6 +74,16 @@ app.Use(async (context, next) =>
     context.Response.Headers["Referrer-Policy"] = "no-referrer";
     context.Response.Headers["Cache-Control"] = "no-store";
     using (Serilog.Context.LogContext.PushProperty("CorrelationId", id)) await next();
+});
+app.UseSerilogRequestLogging(options =>
+{
+    options.MessageTemplate = "HTTP {RequestMethod} {Route} responded {StatusCode} in {Elapsed:0.0000} ms";
+    options.EnrichDiagnosticContext = (diagnostics, context) =>
+    {
+        diagnostics.Set("CorrelationId", context.TraceIdentifier);
+        // Use a registered route template rather than an attacker-controlled path.
+        diagnostics.Set("Route", (context.GetEndpoint() as Microsoft.AspNetCore.Routing.RouteEndpoint)?.RoutePattern.RawText ?? "unmatched");
+    };
 });
 if (!app.Environment.IsDevelopment()) app.UseHsts();
 app.UseCors();
@@ -77,11 +101,13 @@ app.Use(async (context, next) =>
 app.UseAuthentication(); app.UseAuthorization();
 if (app.Environment.IsDevelopment()) app.MapOpenApi();
 app.MapGet("/health/live", () => Results.Ok(new { status = "healthy" }));
-app.MapGet("/health/ready", async (ZyvenDbContext db, IConnectionMultiplexer redis, CancellationToken ct) =>
+app.MapGet("/health", CheckReadiness);
+app.MapGet("/health/ready", CheckReadiness);
+static async Task<IResult> CheckReadiness(ZyvenDbContext db, IConnectionMultiplexer redis, CancellationToken ct)
 {
     try { if (!await db.Database.CanConnectAsync(ct)) return Results.StatusCode(503); await redis.GetDatabase().PingAsync(); return Results.Ok(new { status = "healthy" }); }
     catch { return Results.StatusCode(503); }
-});
+}
 app.MapPost("/api/auth/register", async (RegisterRequest input, RegisterValidator validator, AuthService auth, HttpContext context, CancellationToken ct) =>
 {
     var validation = await validator.ValidateAsync(input, ct); if (!validation.IsValid) return Results.ValidationProblem(validation.ToDictionary());
@@ -117,3 +143,6 @@ static CookieOptions CookieOptions(bool development) => new() { HttpOnly = true,
 static void SetCookie(HttpContext context, AuthGrant grant, bool development) { var options = CookieOptions(development); options.Expires = grant.ExpiresAt; context.Response.Cookies.Append("zyven_refresh", grant.RefreshToken, options); }
 static void ClearCookie(HttpContext context, bool development) => context.Response.Cookies.Delete("zyven_refresh", CookieOptions(development));
 public partial class Program { }
+
+
+

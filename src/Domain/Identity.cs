@@ -24,3 +24,13 @@ public sealed class RefreshToken
     public AuthSession Session { get; set; } = null!;
     public DateTimeOffset? ConsumedAt { get; set; }
 }
+
+// Security event history survives session expiry; no credentials or tokens are recorded.
+public sealed class AuthEvent
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid UserId { get; set; }
+    public Guid SessionId { get; set; }
+    public string Action { get; set; } = "";
+    public DateTimeOffset OccurredAt { get; set; }
+}

@@ -1,3 +1,6 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Zyven.Infrastructure;
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -34,6 +37,9 @@ public class AuthLifecycleTests
         client.DefaultRequestHeaders.Authorization = new("Bearer", auth.AccessToken);
         client.DefaultRequestHeaders.Add("Cookie", login.Headers.GetValues("Set-Cookie").Single(x => x.StartsWith("zyven_refresh=")).Split(';')[0]);
         Assert.Equal(HttpStatusCode.NoContent, (await client.PostAsync("/api/auth/logout", null)).StatusCode);
+        using var scope = app.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<ZyvenDbContext>();
+        var events = await db.Database.SqlQueryRaw<string>("SELECT \"Action\" AS \"Value\" FROM \"AuthEvents\" WHERE \"UserId\" = {0}", auth.User.Id).ToListAsync();
+        Assert.Contains("session.revoked.replay", events); Assert.Contains("session.revoked.logout", events);
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/auth/me")).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsync("/api/auth/refresh", null)).StatusCode);
     }
@@ -47,3 +53,4 @@ public class AuthLifecycleTests
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsJsonAsync("/api/auth/login", new { email = "missing@example.com", password = "invalid password" })).StatusCode);
     }
 }
+
