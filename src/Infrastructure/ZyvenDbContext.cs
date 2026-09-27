@@ -4,6 +4,8 @@ namespace Zyven.Infrastructure;
 
 public sealed class ZyvenDbContext(DbContextOptions<ZyvenDbContext> options) : DbContext(options)
 {
+    public DbSet<Product> Products => Set<Product>();
+    public DbSet<Offer> Offers => Set<Offer>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<Organization> Organizations => Set<Organization>();
     public DbSet<OrganizationMember> OrganizationMembers => Set<OrganizationMember>();
@@ -13,6 +15,8 @@ public sealed class ZyvenDbContext(DbContextOptions<ZyvenDbContext> options) : D
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     protected override void OnModelCreating(ModelBuilder b)
     {
+        b.ApplyConfiguration(new ProductConfiguration());
+        b.ApplyConfiguration(new OfferConfiguration());
         b.Entity<AuditLog>().Property(x => x.Action).HasMaxLength(80);
         b.Entity<AuditLog>().HasIndex(x => new { x.OrganizationId, x.OccurredAt });
         b.Entity<Organization>().Property(x => x.Name).HasMaxLength(100);
