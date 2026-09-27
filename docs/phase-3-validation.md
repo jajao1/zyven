@@ -12,3 +12,5 @@ Concluída em 27/09/2026. Commits de implementação: 7f13446, a488d2d e 7571c19
 O teste local inicial encontrou um 401 transitório; logs do container apresentaram timestamps não monotônicos (18:18:34 seguidos de 18:18:19), compatíveis com ajuste de relógio durante o cenário. A causa não foi confirmada e o problema não se reproduziu nas duas execuções seguintes, que passaram incluindo logout das duas contas. A validação temporal do JWT permaneceu restrita, sem afrouxamento. O script preserva o erro original caso a limpeza das sessões também falhe.
 
 Pagamentos, vendas e receita não foram simulados. Ofertas em ACTIVE ainda dependem da página/checkout e das próximas fases para venda completa.
+
+CI Linux aprovada sobre 4c5375b: https://github.com/jajao1/zyven/actions/runs/36340408340 (backend e frontend).
