@@ -1,0 +1,89 @@
+name: zyven
+x-app-environment: &app-environment
+  ConnectionStrings__Database: Host=postgres;Database=zyven;Username=zyven;Password=${POSTGRES_PASSWORD:?Run scripts/setup.ps1 first}
+  ConnectionStrings__Redis: redis:6379,password=${REDIS_PASSWORD:?Run scripts/setup.ps1 first},abortConnect=false
+  Jwt__SigningKey: ${JWT_SIGNING_KEY:?Run scripts/setup.ps1 first}
+  Jwt__Issuer: Zyven
+  Jwt__Audience: Zyven.Web
+  Cors__AllowedOrigins__0: http://localhost:${WEB_PORT:-8088}
+  Cors__AllowedOrigins__1: http://localhost:5173
+  ASPNETCORE_ENVIRONMENT: Development
+  DOTNET_ENVIRONMENT: Development
+  ReverseProxy__KnownProxies__0: 172.30.0.10
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: zyven
+      POSTGRES_USER: zyven
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run scripts/setup.ps1 first}
+    ports: ["127.0.0.1:${POSTGRES_PORT:-55432}:5432"]
+    volumes: ["postgres-data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zyven -d zyven"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+  redis:
+    image: redis:8.2-alpine
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Run scripts/setup.ps1 first}
+    command: ["/bin/sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\" --appendonly yes"]
+    ports: ["127.0.0.1:${REDIS_PORT:-56379}:6379"]
+    volumes: ["redis-data:/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=$$REDIS_PASSWORD redis-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+  migrate:
+    build: { context: ., target: api }
+    command: ["--migrate"]
+    environment: *app-environment
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    restart: "no"
+  api:
+    build: { context: ., target: api }
+    environment: *app-environment
+    ports: ["127.0.0.1:${API_PORT:-5080}:8080"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8080/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+  worker:
+    build: { context: ., target: worker }
+    environment: *app-environment
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    restart: unless-stopped
+  frontend:
+    build: { context: ./web }
+    ports: ["127.0.0.1:${WEB_PORT:-8088}:8080"]
+    depends_on:
+      api: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      default:
+        ipv4_address: 172.30.0.10
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: ${DOCKER_SUBNET:-172.30.0.0/24}
+volumes:
+  postgres-data:
+  redis-data:

@@ -1,0 +1,16 @@
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+**/coverage/
+**/TestResults/
+.env
+.env.*
+!.env.example
+*.user
+*.log
+.vs/
+.idea/
+work/
+playwright-report/
+test-results/
