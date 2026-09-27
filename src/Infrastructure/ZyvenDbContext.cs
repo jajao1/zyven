@@ -4,6 +4,8 @@ namespace Zyven.Infrastructure;
 
 public sealed class ZyvenDbContext(DbContextOptions<ZyvenDbContext> options) : DbContext(options)
 {
+    public DbSet<MerchantAccount> MerchantAccounts => Set<MerchantAccount>();
+    public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<OfferPage> OfferPages => Set<OfferPage>();
     public DbSet<CheckoutSession> Checkouts => Set<CheckoutSession>();
@@ -18,6 +20,8 @@ public sealed class ZyvenDbContext(DbContextOptions<ZyvenDbContext> options) : D
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     protected override void OnModelCreating(ModelBuilder b)
     {
+        b.ApplyConfiguration(new MerchantAccountConfiguration());
+        b.ApplyConfiguration(new PaymentConfiguration());
         b.ApplyConfiguration(new CustomerConfiguration());
         b.ApplyConfiguration(new OfferPageConfiguration());
         b.ApplyConfiguration(new CheckoutConfiguration());
