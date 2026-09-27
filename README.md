@@ -27,8 +27,9 @@ O Compose inicia PostgreSQL e Redis, aplica migrations em um processo separado, 
 | WEB_PORT / API_PORT | Portas locais 8088 / 5080 |
 | POSTGRES_PORT / REDIS_PORT | Portas locais 55432 / 56379 |
 | DOCKER_SUBNET | Rede local padrão 172.30.0.0/24 |
+| DOCKER_PROXY_IP | Endereço do frontend/proxy na rede, padrão 172.30.0.10 |
 
-A API aceita `ConnectionStrings__Database`, `ConnectionStrings__Redis`, `Jwt__SigningKey`, `Jwt__Issuer`, `Jwt__Audience` e `Cors__AllowedOrigins__0`. O proxy confiável do Compose tem endereço fixo 172.30.0.10, informado por `ReverseProxy__KnownProxies__0`. Ao alterar a rede, altere também esses endereços no Compose. Cabeçalhos de outros proxies não são confiados.
+A API aceita `ConnectionStrings__Database`, `ConnectionStrings__Redis`, `Jwt__SigningKey`, `Jwt__Issuer`, `Jwt__Audience` e `Cors__AllowedOrigins__0`. O endereço `DOCKER_PROXY_IP` configura tanto o frontend quanto `ReverseProxy__KnownProxies__0`. Ao alterar `DOCKER_SUBNET`, escolha também um `DOCKER_PROXY_IP` livre dentro da nova rede. Cabeçalhos de outros proxies não são confiados.
 
 O Compose é um ambiente de **Development**. Em produção, configurar TLS no proxy, ambientes Production, origens HTTPS explícitas e segredos gerenciados. Cookies recebem `Secure` fora de Development. Não publicar PostgreSQL/Redis nem a porta direta da API. A configuração local não representa um deployment de produção.
 
@@ -74,9 +75,14 @@ Hangfire persiste jobs no PostgreSQL. O Worker limpa sessões expiradas a cada h
 
 ```powershell
 ./scripts/test.ps1
+./scripts/smoke.ps1
 ```
 
 Esse script cria o projeto Docker exclusivo `zyven-tests` nas portas 55433/56380, aplica migrations e executa build .NET, testes, formatação, verificação de modelo EF, testes frontend, build e lint. Ao terminar, remove somente os containers e volumes desse projeto de testes. Não use esse nome de projeto para dados que deseje preservar. O workflow `.github/workflows/ci.yml` repete os checks em serviços efêmeros.
+
+No Windows, encerre o servidor Vite antes de rodar `test.ps1`: a reinstalação reproduzível de dependências não consegue substituir arquivos nativos enquanto estiverem em uso.
+
+`smoke.ps1` verifica o ciclo de autenticação pelo frontend/proxy local. Cria uma conta identificada por `smoke-…@example.test` e encerra suas sessões ao terminar; a conta de teste fica no banco local.
 
 Para desenvolver o frontend com a API do Compose: `cd web`, `npm ci`, `npm run dev`; abra http://localhost:5173. O Vite encaminha `/api` para a API local.
 

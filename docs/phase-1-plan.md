@@ -10,11 +10,11 @@ JWT de 10 minutos; refresh tokens aleatórios armazenados somente como hash, em 
 
 ## Execução e critérios
 
-- [ ] Backend: projetos net10.0, endpoints register/login/refresh/logout/me, EF Core/PostgreSQL, migrations, OpenAPI, Serilog, readiness PostgreSQL/Redis, worker persistente e testes unitários e de integração reais.
-- [ ] Frontend: Vite/React/TypeScript, Tailwind/shadcn, Query, Hook Form/Zod e dependência Recharts; cadastro, login, sessão e logout sem dados comerciais fictícios.
-- [ ] Infra: Dockerfiles, Compose API/Worker/frontend/PostgreSQL/Redis, segredos locais ignorados, instruções de execução e CI.
-- [ ] Verificar build, testes, lint, migrations, smoke e revisão de segurança; corrigir falhas antes da Fase 2.
-- [ ] Commits pequenos e descritivos com documentação das evidências e limitações.
+- [x] Backend: projetos net10.0, endpoints register/login/refresh/logout/me, EF Core/PostgreSQL, migrations, OpenAPI, Serilog, readiness PostgreSQL/Redis, worker persistente e testes unitários e de integração reais.
+- [x] Frontend: Vite/React/TypeScript, Tailwind/shadcn, Query, Hook Form/Zod e dependência Recharts; cadastro, login, sessão e logout sem dados comerciais fictícios.
+- [x] Infra: Dockerfiles, Compose API/Worker/frontend/PostgreSQL/Redis, segredos locais ignorados, instruções de execução e CI.
+- [x] Verificar build, testes, lint, migrations, smoke e revisão de segurança; corrigir falhas antes da Fase 2.
+- [x] Commits pequenos e descritivos com documentação das evidências e limitações.
 
 ## Testes de aceitação
 

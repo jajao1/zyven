@@ -10,6 +10,7 @@ try {
     $env:POSTGRES_PORT = '55433'
     $env:REDIS_PORT = '56380'
     $env:DOCKER_SUBNET = '172.31.0.0/24'
+    $env:DOCKER_PROXY_IP = '172.31.0.10'
     docker compose -p zyven-tests up -d --wait postgres redis
     Check-Exit
     $env:ConnectionStrings__Database = "Host=localhost;Port=55433;Database=zyven;Username=zyven;Password=$($values.POSTGRES_PASSWORD)"
@@ -45,6 +46,6 @@ try {
 } finally {
     # This project is created exclusively for this test run; application volumes are untouched.
     docker compose -p zyven-tests down -v
-    @('POSTGRES_PORT','REDIS_PORT','DOCKER_SUBNET','ConnectionStrings__Database','ConnectionStrings__Redis','Jwt__SigningKey','Jwt__Issuer','Jwt__Audience','Cors__AllowedOrigins__0','ASPNETCORE_ENVIRONMENT') | ForEach-Object { Remove-Item "Env:$_" -ErrorAction SilentlyContinue }
+    @('POSTGRES_PORT','REDIS_PORT','DOCKER_SUBNET','DOCKER_PROXY_IP','ConnectionStrings__Database','ConnectionStrings__Redis','Jwt__SigningKey','Jwt__Issuer','Jwt__Audience','Cors__AllowedOrigins__0','ASPNETCORE_ENVIRONMENT') | ForEach-Object { Remove-Item "Env:$_" -ErrorAction SilentlyContinue }
     Pop-Location
 }
