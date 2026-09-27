@@ -1,84 +1,54 @@
 import { Catalog } from './Catalog'
-import { useCatalogLocation, navigateCatalog } from './lib/catalog-navigation'
+import { Customers } from './Customers'
+import { WorkspaceOverview } from './WorkspaceOverview'
+import { useCatalogLocation, navigateWorkspace, type WorkspaceView } from './lib/catalog-navigation'
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Building2, Plus, Users } from 'lucide-react'
+import { Building2, LayoutGrid, Package, Plus, Settings, ShoppingBag, Users } from 'lucide-react'
 import { ApiError } from './lib/auth-client'
 import { organizationClient as api, roleNames, type Role, type Member, type Page } from './lib/organization-client'
 import { Button } from './components/ui/button'
 import { Input } from './components/ui/input'
 import { Label } from './components/ui/label'
 
-function ErrorNotice({ error }: { error: Error | null }) {
-  return error ? <p role="alert" className="error-notice">{error instanceof ApiError ? error.message : 'Não foi possível conectar. Tente novamente.'}</p> : null
-}
-function Pagination({ data, page, setPage }: { data?: Page<unknown>; page: number; setPage: (page: number) => void }) {
-  if (!data || data.total <= data.pageSize) return null
-  return <div className="pagination"><Button variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>Anterior</Button><span>Página {page} de {Math.ceil(data.total / data.pageSize)}</span><Button variant="outline" disabled={page * data.pageSize >= data.total} onClick={() => setPage(page + 1)}>Próxima</Button></div>
-}
+function ErrorNotice({ error }: { error: Error | null }) { return error ? <p role="alert" className="error-notice">{error instanceof ApiError ? error.message : 'Não foi possível conectar. Tente novamente.'}</p> : null }
+function Pagination({ data, page, setPage }: { data?: Page<unknown>; page: number; setPage: (page: number) => void }) { if (!data || data.total <= data.pageSize) return null; return <div className="pagination"><Button variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>Anterior</Button><span>Página {page} de {Math.ceil(data.total / data.pageSize)}</span><Button variant="outline" disabled={page * data.pageSize >= data.total} onClick={() => setPage(page + 1)}>Próxima</Button></div> }
 const roles = Object.keys(roleNames) as Role[]
-function RoleOptions({ owner }: { owner: boolean }) {
-  return roles.filter(role => owner || !['OWNER', 'ADMIN'].includes(role)).map(role => <option key={role} value={role}>{roleNames[role]}</option>)
-}
+function RoleOptions({ owner }: { owner: boolean }) { return roles.filter(role => owner || !['OWNER', 'ADMIN'].includes(role)).map(role => <option key={role} value={role}>{roleNames[role]}</option>) }
 function MemberRow({ member, actor, pending, change, remove }: { member: Member; actor: Role; pending: boolean; change: (role: Role) => void; remove: () => void }) {
-  const [role, setRole] = useState(member.role)
-  const canManage = actor === 'OWNER' || actor === 'ADMIN' && !['OWNER', 'ADMIN'].includes(member.role)
-  const [confirm, setConfirm] = useState(false)
-  return <li className="member-row"><div className="member-identity"><strong>{member.displayName}</strong><span>{member.email}</span></div>
-    {canManage ? <div className="member-actions"><select aria-label={`Papel de ${member.displayName}`} value={role} onChange={event => setRole(event.target.value as Role)} disabled={pending}><RoleOptions owner={actor === 'OWNER'} /></select>
-      <Button variant="outline" disabled={pending || role === member.role} onClick={() => change(role)}>Salvar papel</Button>
-      {confirm ? <><span>Remover acesso?</span><Button variant="outline" disabled={pending} onClick={remove}>Confirmar remoção</Button><Button variant="ghost" disabled={pending} onClick={() => setConfirm(false)}>Cancelar</Button></> : <Button variant="ghost" disabled={pending} onClick={() => setConfirm(true)}>Remover</Button>}
-    </div> : <span className="role-badge">{roleNames[member.role]}</span>}
-  </li>
+  const [role, setRole] = useState(member.role); const [confirm, setConfirm] = useState(false); const canManage = actor === 'OWNER' || actor === 'ADMIN' && !['OWNER', 'ADMIN'].includes(member.role)
+  return <li className="member-row"><div className="member-identity"><strong>{member.displayName}</strong><span>{member.email}</span></div>{canManage ? <div className="member-actions"><select aria-label={`Papel de ${member.displayName}`} value={role} onChange={event => setRole(event.target.value as Role)} disabled={pending}><RoleOptions owner={actor === 'OWNER'} /></select><Button variant="outline" disabled={pending || role === member.role} onClick={() => change(role)}>Salvar papel</Button>{confirm ? <><span>Remover acesso?</span><Button variant="outline" disabled={pending} onClick={remove}>Confirmar remoção</Button><Button variant="ghost" disabled={pending} onClick={() => setConfirm(false)}>Cancelar</Button></> : <Button variant="ghost" disabled={pending} onClick={() => setConfirm(true)}>Remover</Button>}</div> : <span className="role-badge">{roleNames[member.role]}</span>}</li>
 }
-function Workspace({ id, userId, onLostAccess }: { id: string; userId: string; onLostAccess: () => void }) {
-  const client = useQueryClient()
-  const [page, setPage] = useState(1)
-  const detail = useQuery({ queryKey: ['organizations', userId, id, 'details'], queryFn: () => api.get(id), retry: false })
-  const members = useQuery({ queryKey: ['organizations', userId, id, 'members', page], queryFn: () => api.members(id, page), retry: false })
-  const [name, setName] = useState<string | null>(null)
-  const [email, setEmail] = useState('')
-  const [role, setRole] = useState<Role>('OPERATOR')
-  const assignableRole = detail.data?.role === 'ADMIN' && ['OWNER', 'ADMIN'].includes(role) ? 'OPERATOR' : role
-  async function invalidate() { await client.invalidateQueries({ queryKey: ['organizations', userId] }) }
-  const rename = useMutation({ mutationFn: () => api.rename(id, name ?? detail.data!.name), onSuccess: async () => { setName(null); await invalidate() } })
-  const add = useMutation({ mutationFn: () => api.add(id, email.trim(), assignableRole), onSuccess: async () => { setEmail(''); await invalidate() } })
-  const change = useMutation({ mutationFn: ({ memberId, role }: { memberId: string; role: Role }) => api.change(id, memberId, role), onSettled: invalidate })
-  const remove = useMutation({ mutationFn: (memberId: string) => api.remove(id, memberId), onSettled: invalidate })
+
+const destinations: Array<{ view: WorkspaceView; path: string; label: string; icon: typeof LayoutGrid }> = [
+  { view: 'overview', path: '/dashboard', label: 'Visão geral', icon: LayoutGrid }, { view: 'products', path: '/products', label: 'Produtos', icon: Package }, { view: 'offers', path: '/offers', label: 'Ofertas', icon: ShoppingBag }, { view: 'customers', path: '/customers', label: 'Clientes', icon: Users }, { view: 'team', path: '/team', label: 'Equipe', icon: Users }, { view: 'settings', path: '/settings', label: 'Configurações', icon: Settings },
+]
+
+function Team({ id, userId, actor }: { id: string; userId: string; actor: Role }) {
+  const client = useQueryClient(); const [page, setPage] = useState(1); const [email, setEmail] = useState(''); const [role, setRole] = useState<Role>('OPERATOR')
+  const members = useQuery({ queryKey: ['organizations', userId, id, 'members', page], queryFn: () => api.members(id, page), retry: false }); const canManage = actor === 'OWNER' || actor === 'ADMIN'; const assignableRole = actor === 'ADMIN' && ['OWNER', 'ADMIN'].includes(role) ? 'OPERATOR' : role
+  async function invalidate() { await client.invalidateQueries({ queryKey: ['organizations', userId, id, 'members'] }) }
+  const add = useMutation({ mutationFn: () => api.add(id, email.trim(), assignableRole), onSuccess: async () => { setEmail(''); await invalidate() } }); const change = useMutation({ mutationFn: ({ memberId, role }: { memberId: string; role: Role }) => api.change(id, memberId, role), onSettled: invalidate }); const remove = useMutation({ mutationFn: (memberId: string) => api.remove(id, memberId), onSettled: invalidate })
+  return <section><div className="overview-heading"><div><p className="eyebrow">Acessos</p><h1>Equipe</h1><p>Cada pessoa acessa esta organização de acordo com seu papel.</p></div><span className="overview-folio">05</span></div>{canManage && <form className="member-form" onSubmit={event => { event.preventDefault(); add.mutate() }}><div className="field"><Label htmlFor="member-email">E-mail da pessoa</Label><Input id="member-email" type="email" required maxLength={254} value={email} onChange={event => setEmail(event.target.value)} /><p className="field-help">A pessoa precisa ter uma conta na Zyven.</p></div><div className="field"><Label htmlFor="new-role">Papel</Label><select id="new-role" value={assignableRole} onChange={event => setRole(event.target.value as Role)}><RoleOptions owner={actor === 'OWNER'} /></select></div><Button disabled={add.isPending}><Plus />Adicionar membro</Button></form>}<ErrorNotice error={add.error ?? change.error ?? remove.error} />{members.isPending ? <p role="status">Carregando equipe...</p> : members.error ? <><ErrorNotice error={members.error} /><Button variant="outline" onClick={() => void members.refetch()}>Recarregar equipe</Button></> : <><ul className="member-list">{members.data?.items.map(member => <MemberRow key={`${member.id}-${member.role}`} member={member} actor={actor} pending={change.isPending || remove.isPending} change={role => change.mutate({ memberId: member.id, role })} remove={() => remove.mutate(member.id)} />)}</ul><Pagination data={members.data} page={page} setPage={setPage} /></>}</section>
+}
+
+function OrganizationSettings({ id, userId, organization }: { id: string; userId: string; organization: { name: string; role: Role } }) {
+  const client = useQueryClient(); const [name, setName] = useState(organization.name); const canManage = organization.role === 'OWNER' || organization.role === 'ADMIN'; const rename = useMutation({ mutationFn: () => api.rename(id, name.trim()), onSuccess: async () => { await client.invalidateQueries({ queryKey: ['organizations', userId] }) } })
+  return <section><div className="overview-heading"><div><p className="eyebrow">Organização</p><h1>Configurações</h1><p>Dados gerais e seu nível de acesso.</p></div><span className="overview-folio">06</span></div><div className="settings-grid"><form onSubmit={event => { event.preventDefault(); rename.mutate() }}><div className="field"><Label htmlFor="org-name">Nome da organização</Label><Input id="org-name" value={name} maxLength={100} disabled={!canManage} onChange={event => setName(event.target.value)} /></div>{canManage && <Button disabled={rename.isPending || !name.trim()}>Salvar alterações</Button>}</form><dl><dt>Seu papel</dt><dd>{roleNames[organization.role]}</dd></dl></div><ErrorNotice error={rename.error} /></section>
+}
+
+function Workspace({ id, userId, organizations, onLostAccess }: { id: string; userId: string; organizations: Array<{ id: string; name: string; role: Role }>; onLostAccess: () => void }) {
+  const route = useCatalogLocation(); const detail = useQuery({ queryKey: ['organizations', userId, id, 'details'], queryFn: () => api.get(id), retry: false })
   if (detail.isPending) return <p role="status">Abrindo organização...</p>
-  if (detail.error) return <div><ErrorNotice error={detail.error} /><Button variant="outline" onClick={onLostAccess}>Voltar às organizações</Button><Button variant="outline" onClick={() => void detail.refetch()}>Tentar novamente</Button></div>
-  const organization = detail.data!
-  const canManage = organization.role === 'OWNER' || organization.role === 'ADMIN'
-  return <section className="workspace" aria-label={`Organização ${organization.name}`}>
-    <div className="section-heading"><div><p className="eyebrow">Organização ativa</p><h2>{organization.name}</h2></div><span className="role-badge">{roleNames[organization.role]}</span></div>
-    {canManage && <form className="inline-form" onSubmit={event => { event.preventDefault(); rename.mutate() }}><div className="field"><Label htmlFor="org-name">Nome da organização</Label><Input id="org-name" maxLength={100} required value={name ?? organization.name} onChange={event => setName(event.target.value)} /></div><Button variant="outline" disabled={rename.isPending || !(name ?? organization.name).trim()}>Salvar nome</Button></form>}
-    <ErrorNotice error={rename.error} />
-    <Catalog org={id} userId={userId} role={organization.role} />
-    <div className="team-heading"><Users size={20} /><h3>Equipe</h3></div>
-    <p className="section-copy">Cada pessoa acessa esta organização de acordo com seu papel.</p>
-    {canManage && <form className="member-form" onSubmit={event => { event.preventDefault(); add.mutate() }}><div className="field"><Label htmlFor="member-email">E-mail da pessoa</Label><Input id="member-email" type="email" required maxLength={254} placeholder="pessoa@exemplo.com" value={email} onChange={event => setEmail(event.target.value)} /><p className="field-help">A pessoa precisa ter uma conta na Zyven.</p></div><div className="field"><Label htmlFor="new-role">Papel</Label><select id="new-role" value={assignableRole} onChange={event => setRole(event.target.value as Role)}><RoleOptions owner={organization.role === 'OWNER'} /></select></div><Button disabled={add.isPending}><Plus size={16} />Adicionar membro</Button></form>}
-    <ErrorNotice error={add.error ?? change.error ?? remove.error} />
-    {members.isPending ? <p role="status">Carregando equipe...</p> : members.error ? <><ErrorNotice error={members.error} /><Button variant="outline" onClick={() => void members.refetch()}>Recarregar equipe</Button></> : <><ul className="member-list">{members.data?.items.map(member => <MemberRow key={`${member.id}-${member.role}`} member={member} actor={organization.role} pending={change.isPending || remove.isPending} change={role => change.mutate({ memberId: member.id, role })} remove={() => remove.mutate(member.id)} />)}</ul><Pagination data={members.data} page={page} setPage={setPage} /></>}
-  </section>
+  if (detail.error) return <div><ErrorNotice error={detail.error} /><Button variant="outline" onClick={onLostAccess}>Voltar às organizações</Button></div>
+  const organization = detail.data!; const view = route.view === 'organizations' ? 'overview' : route.view
+  return <section className="workspace-shell" aria-label={`Organização ${organization.name}`}><aside className="workspace-rail"><div className="rail-organization"><Label htmlFor="active-org">Organização</Label><select id="active-org" value={id} onChange={event => navigateWorkspace('/dashboard', event.target.value)}>{organizations.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select><span>{roleNames[organization.role]}</span></div><nav aria-label="Navegação da organização">{destinations.map((destination, index) => { const Icon = destination.icon; return <button key={destination.view} className={view === destination.view ? 'active' : ''} onClick={() => navigateWorkspace(destination.path, id)}><span>0{index + 1}</span><Icon /><strong>{destination.label}</strong></button> })}</nav></aside><div className="workspace-canvas">{view === 'overview' && <WorkspaceOverview org={id} userId={userId} organizationName={organization.name} />}{(view === 'products' || view === 'offers') && <Catalog org={id} userId={userId} role={organization.role} />}{view === 'customers' && <Customers org={id} userId={userId} />}{view === 'team' && <Team id={id} userId={userId} actor={organization.role} />}{view === 'settings' && <OrganizationSettings id={id} userId={userId} organization={organization} />}</div></section>
 }
+
 export function Organizations({ userId }: { userId: string }) {
-  const client = useQueryClient()
-  const [page, setPage] = useState(1)
-  const route = useCatalogLocation()
-  const [chosen, setSelected] = useState('')
-  const selected = route.org || chosen
-  const [name, setName] = useState('')
-  const list = useQuery({ queryKey: ['organizations', userId, 'list', page], queryFn: () => api.list(page), retry: false })
-  const create = useMutation({ mutationFn: () => api.create(name.trim()), onSuccess: async organization => { setName(''); setSelected(organization.id); navigateCatalog('/products', organization.id); await client.invalidateQueries({ queryKey: ['organizations', userId] }) } })
-  return <section className="organizations-panel"><div className="section-heading"><div><p className="eyebrow">Seu trabalho, em equipe</p><h2>Suas organizações</h2></div><Building2 size={28} /></div>
-    <p className="section-copy">Escolha um espaço para trabalhar ou crie uma nova organização.</p>
-    {list.isPending ? <p role="status">Carregando organizações...</p> : list.error ? <><ErrorNotice error={list.error} /><Button variant="outline" onClick={() => void list.refetch()}>Recarregar organizações</Button></> : <>
-      {!list.data?.total && <p>Você ainda não participa de uma organização.</p>}
-      {!!list.data?.items.length && <div className="field"><Label htmlFor="active-org">Organização ativa</Label><select id="active-org" value={list.data.items.some(item => item.id === selected) ? selected : ''} onChange={event => { setSelected(event.target.value); navigateCatalog('/products', event.target.value) }}><option value="">Selecione uma organização</option>{list.data.items.map(item => <option key={item.id} value={item.id}>{item.name} · {roleNames[item.role]}</option>)}</select></div>}
-      <Pagination data={list.data} page={page} setPage={setPage} />
-    </>}
-    <form className="inline-form create-org" onSubmit={event => { event.preventDefault(); create.mutate() }}><div className="field"><Label htmlFor="new-org">Nome da nova organização</Label><Input id="new-org" required maxLength={100} placeholder="Ex.: Estúdio Aurora" value={name} onChange={event => setName(event.target.value)} /></div><Button disabled={create.isPending || !name.trim()}><Plus size={16} />Criar organização</Button></form>
-    <ErrorNotice error={create.error} />
-    {selected && <Workspace key={selected} id={selected} userId={userId} onLostAccess={() => { setSelected(''); navigateCatalog('/', ''); void client.invalidateQueries({ queryKey: ['organizations', userId] }) }} />}
-  </section>
+  const client = useQueryClient(); const [page, setPage] = useState(1); const route = useCatalogLocation(); const [chosen, setSelected] = useState(''); const selected = route.org || chosen; const [name, setName] = useState(''); const list = useQuery({ queryKey: ['organizations', userId, 'list', page], queryFn: () => api.list(page), retry: false })
+  const create = useMutation({ mutationFn: () => api.create(name.trim()), onSuccess: async organization => { setName(''); setSelected(organization.id); navigateWorkspace('/dashboard', organization.id); await client.invalidateQueries({ queryKey: ['organizations', userId] }) } })
+  if (list.isPending) return <p role="status">Carregando organizações...</p>; if (list.error) return <><ErrorNotice error={list.error} /><Button variant="outline" onClick={() => void list.refetch()}>Recarregar organizações</Button></>
+  const organizations = list.data?.items ?? []; if (selected && organizations.some(item => item.id === selected)) return <Workspace key={selected} id={selected} userId={userId} organizations={organizations} onLostAccess={() => { setSelected(''); navigateWorkspace('/', ''); void client.invalidateQueries({ queryKey: ['organizations', userId] }) }} />
+  return <section className="organization-entry"><div className="overview-heading"><div><p className="eyebrow">Comece por aqui</p><h1>Organizações</h1><p>Escolha um espaço existente ou crie sua operação.</p></div><span className="overview-folio">00</span></div>{organizations.length > 0 && <div className="organization-list">{organizations.map(item => <button key={item.id} onClick={() => { setSelected(item.id); navigateWorkspace('/dashboard', item.id) }}><Building2 /><span><strong>{item.name}</strong><small>{roleNames[item.role]}</small></span></button>)}</div>}<Pagination data={list.data} page={page} setPage={setPage} /><form className="create-organization" onSubmit={event => { event.preventDefault(); create.mutate() }}><Label htmlFor="new-org">Nova organização</Label><div><Input id="new-org" required maxLength={100} placeholder="Nome da organização" value={name} onChange={event => setName(event.target.value)} /><Button disabled={create.isPending || !name.trim()}><Plus />Criar</Button></div></form><ErrorNotice error={create.error} /></section>
 }

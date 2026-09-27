@@ -17,7 +17,7 @@ A especificação mestre permanece a autoridade. Este mapa registra a sequência
 | 11 | Telegram | Após primeiro fluxo completo |
 | 12 | Área de membros | Pendente |
 | 13 | Assinaturas e expiração de acesso | Pendente |
-| 14 | Dashboard, vendas e clientes | Pendente |
+| 14 | Dashboard, vendas e clientes | Workspace e diretório básicos antecipados; vendas dependem de pagamentos |
 | 15 | Cupons, order bump e upsell | Pendente |
 | 16 | Tracking, campanhas e pixels | Pendente |
 | 17 | Automações persistentes e recuperação | Pendente |

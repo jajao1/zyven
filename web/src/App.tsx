@@ -1,7 +1,7 @@
 import { Organizations } from './Organizations'
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowUpRight, ArrowRight, Check, LoaderCircle, LogOut, ShieldCheck } from 'lucide-react'
+import { ArrowUpRight, ArrowRight, LoaderCircle, LogOut, ShieldCheck } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -70,14 +70,7 @@ function AuthForm({ onAuthenticated }: { onAuthenticated: (user: User) => Promis
 
 function Account({ user, onLogout }: { user: User; onLogout: () => Promise<void> }) {
   const logout = useMutation({ mutationFn: () => authClient.logout(), onSuccess: onLogout })
-  return <section className="account-panel">
-    <div className="account-status"><Check size={17} /> Conta conectada</div>
-    <h1>Olá, {user.displayName}.</h1>
-    <p>Este é o seu espaço na Zyven.</p>
-    <dl className="account-details"><div><dt>Nome</dt><dd>{user.displayName}</dd></div><div><dt>E-mail</dt><dd>{user.email}</dd></div></dl>
-    {logout.error && <p role="alert" className="error-notice">Não foi possível encerrar a sessão. Tente novamente.</p>}
-    <Button variant="outline" onClick={() => logout.mutate()} disabled={logout.isPending}><LogOut />{logout.isPending ? 'Saindo...' : 'Sair da conta'}</Button>
-  </section>
+  return <div className="account-menu"><h1 className="sr-only">Olá, {user.displayName}.</h1><span><strong>{user.displayName}</strong><small>{user.email}</small></span><Button variant="ghost" onClick={() => logout.mutate()} disabled={logout.isPending}><LogOut />{logout.isPending ? 'Saindo...' : 'Sair da conta'}</Button>{logout.error && <span role="alert" className="sr-only">Não foi possível encerrar a sessão.</span>}</div>
 }
 
 export default function App() {
@@ -92,8 +85,9 @@ export default function App() {
     staleTime: 60_000,
     refetchOnWindowFocus: true,
   })
+  const clearSession = async () => { await client.cancelQueries({ queryKey: ['session'] }); client.setQueryData(['session'], null); client.removeQueries({ predicate: query => query.queryKey[0] !== 'session' }) }
   return <div className="app-shell">
-    <header className="topbar"><a href="/" className="brand" aria-label="Zyven, início"><span className="brand-symbol"><ArrowUpRight /></span>zyven<span className="brand-dot">.</span></a><span className="header-note">Seu conhecimento. Novas possibilidades.</span></header>
+    <header className="topbar"><a href="/" className="brand" aria-label="Zyven, início"><span className="brand-symbol"><ArrowUpRight /></span>zyven<span className="brand-dot">.</span></a>{session.data ? <Account user={session.data} onLogout={clearSession} /> : <span className="header-note">Seu conhecimento. Novas possibilidades.</span>}</header>
     <main className={session.data ? "main-grid authenticated-grid" : "main-grid"}>
       {!session.data && <aside className="intro-panel">
         <div><p className="eyebrow">Para quem tem algo a compartilhar</p><h2>Sua próxima<br />ideia começa<br /><span>aqui.</span></h2><p className="intro-copy">Um espaço para transformar o que você sabe em algo que as pessoas querem descobrir.</p></div>
@@ -102,11 +96,7 @@ export default function App() {
       <div className="form-column">
         {session.isPending ? <p role="status" className="loading"><LoaderCircle className="spin" /> Verificando sua sessão...</p>
           : session.isError ? <div className="auth-panel"><h1>Vamos tentar de novo?</h1><p role="alert">Não foi possível conectar à Zyven.</p><Button onClick={() => void session.refetch()}>Tentar novamente</Button></div>
-          : session.data ? <><Account user={session.data} onLogout={async () => {
-            await client.cancelQueries({ queryKey: ['session'] })
-            client.setQueryData(['session'], null)
-            client.removeQueries({ predicate: query => query.queryKey[0] !== 'session' })
-          }} /><Organizations key={session.data.id} userId={session.data.id} /></>
+          : session.data ? <Organizations key={session.data.id} userId={session.data.id} />
           : <AuthForm onAuthenticated={async user => {
             await client.cancelQueries({ queryKey: ['session'] })
             client.removeQueries({ predicate: query => query.queryKey[0] !== 'session' })
