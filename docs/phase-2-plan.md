@@ -20,10 +20,10 @@ Após autenticação, listar organizações e permitir criar uma. Organização 
 
 ## Verificação
 
-- [ ] Testes primeiro: criar/listar, múltiplos vínculos, ausência de sessão, não-membro sem acesso, ID de membro de outra organização, matriz de permissões, proteção do último proprietário e concorrência.
-- [ ] Migration PostgreSQL com índices de membros e chaves estrangeiras.
-- [ ] Frontend: seleção/criação de organização, gerenciamento permitido de equipe, testes de componentes.
-- [ ] Build backend/frontend, testes unitários e de integração reais, lint/formatação, migrations e smoke Compose.
-- [ ] Revisão de especificação e segurança, documentação e commits pequenos antes da fase 3.
+- [x] Testes primeiro: criar/listar, múltiplos vínculos, ausência de sessão, não-membro sem acesso, ID de membro de outra organização, matriz de permissões, proteção do último proprietário e concorrência.
+- [x] Migration PostgreSQL com índices de membros e chaves estrangeiras.
+- [x] Frontend: seleção/criação de organização, gerenciamento permitido de equipe, testes de componentes.
+- [x] Build backend/frontend, testes unitários e de integração reais, lint/formatação, migrations e smoke Compose.
+- [x] Revisão de especificação e segurança, documentação e commits pequenos antes da fase 3.
 
 A fase 3 adicionará Products e Offers respeitando esta fronteira de autorização.

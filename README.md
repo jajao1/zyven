@@ -1,6 +1,6 @@
 # Zyven
 
-SaaS de social commerce. A especificação mestre está em [`docs/zyven-master-spec.txt`](docs/zyven-master-spec.txt). O desenvolvimento segue suas fases; a primeira entrega implementa a base e autenticação. Os módulos comerciais ainda não são anunciados como disponíveis.
+SaaS de social commerce. A especificação mestre está em [`docs/zyven-master-spec.txt`](docs/zyven-master-spec.txt). O desenvolvimento segue suas fases; as fases 1 e 2 implementam a base, autenticação, organizações e gestão de equipe. Products e Offers são a próxima etapa.
 
 ## Executar localmente
 
@@ -37,7 +37,7 @@ O Compose é um ambiente de **Development**. Em produção, configurar TLS no pr
 
 `src/Domain` contém entidades; `src/Application`, contratos e validação; `src/Infrastructure`, persistência e serviços; `src/Api`, HTTP; `src/Workers`, processamento Hangfire. `web` usa React, TypeScript, Vite, Tailwind, componentes shadcn/ui, TanStack Query, React Hook Form e Zod. Recharts está disponível para a fase de dashboard.
 
-O núcleo comercial será **Product → Offer → Checkout → Payment → Entitlement → Fulfillment**. Organizações e isolamento entram na fase 2. Nenhum identificador de organização enviado pelo cliente deve conferir acesso por si só. Pagamentos, ledger, saldo, saques e integrações não são implementados nesta base.
+O núcleo comercial será **Product → Offer → Checkout → Payment → Entitlement → Fulfillment**. Organizações e isolamento estão implementados; veja [`docs/organizations.md`](docs/organizations.md) para endpoints e permissões. Nenhum identificador de organização enviado pelo cliente deve conferir acesso por si só. Pagamentos, ledger, saldo, saques e integrações não são implementados nesta base.
 
 ## Autenticação
 
@@ -88,4 +88,4 @@ Para desenvolver o frontend com a API do Compose: `cd web`, `npm ci`, `npm run d
 
 ## Evolução
 
-As fases seguintes acrescentam organizações/roles, produtos/ofertas, página pública/checkout, clientes, pagamentos e confirmação idempotente, ledger e entrega. O primeiro fluxo completo deve terminar em `EXTERNAL_LINK` com pagamento confirmado no servidor. Telegram e Discord permanecem integrações. A fonte financeira será o ledger imutável, nunca um saldo editável. APIs e credenciais financeiras reais serão configuradas na fase correspondente; dados simulados não serão tratados como dinheiro real.
+As fases seguintes acrescentam produtos/ofertas, página pública/checkout, clientes, pagamentos e confirmação idempotente, ledger e entrega. O primeiro fluxo completo deve terminar em `EXTERNAL_LINK` com pagamento confirmado no servidor. Telegram e Discord permanecem integrações. A fonte financeira será o ledger imutável, nunca um saldo editável. APIs e credenciais financeiras reais serão configuradas na fase correspondente; dados simulados não serão tratados como dinheiro real.
