@@ -5,7 +5,7 @@ import { vi } from 'vitest'
 import { Catalog } from './Catalog'
 import { offerSchema } from './lib/catalog-validation'
 import { catalogClient } from './lib/catalog-client'
-vi.mock('./lib/catalog-client', async original => ({ ...await original<typeof import('./lib/catalog-client')>(), catalogClient: { products: vi.fn(), product: vi.fn(), offers: vi.fn(), saveProduct: vi.fn(), saveOffer: vi.fn() } }))
+vi.mock('./lib/catalog-client', async original => ({ ...await original<typeof import('./lib/catalog-client')>(), catalogClient: { products: vi.fn(), product: vi.fn(), offer: vi.fn(), offers: vi.fn(), saveProduct: vi.fn(), saveOffer: vi.fn() } }))
 afterEach(() => { cleanup(); vi.clearAllMocks(); window.history.replaceState(null, '', '/') })
 function setup(role: 'OWNER' | 'SUPPORT' = 'OWNER') {
   window.history.replaceState(null, '', '/products?organization=org')
@@ -61,4 +61,33 @@ it('responds to browser navigation and reads direct detail paths', async () => {
   expect(await screen.findByDisplayValue('Saved course')).toBeInTheDocument()
   act(() => { window.history.replaceState(null, '', '/offers?organization=org'); window.dispatchEvent(new PopStateEvent('popstate')) })
   expect(await screen.findByText('Crie uma oferta para um produto do catálogo.')).toBeInTheDocument()
+})
+
+it('waits for current offer data before opening a cached editor and preserves an active draft', async () => {
+  const saved = { id: 'abc', organizationId: 'org', productId: 'def', name: 'Offer', slug: 'offer', headline: '', description: '', price: '10.00', currency: 'BRL', billingType: 'ONE_TIME' as const, status: 'DRAFT' as const, createdAt: '', updatedAt: '' }
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  client.setQueryData(['organizations', 'user', 'org', 'offers', 'abc'], saved)
+  let finish!: (value: typeof saved) => void
+  vi.mocked(catalogClient.offer).mockImplementation(() => new Promise(resolve => { finish = resolve }))
+  vi.mocked(catalogClient.products).mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 20 })
+  vi.mocked(catalogClient.product).mockResolvedValue({ id: 'def', organizationId: 'org', name: 'Product', slug: 'product', description: '', imageUrl: '', status: 'DRAFT', createdAt: '', updatedAt: '' })
+  window.history.replaceState(null, '', '/offers/abc?organization=org')
+  render(<QueryClientProvider client={client}><Catalog org="org" userId="user" role="OWNER" /></QueryClientProvider>)
+  expect(screen.queryByLabelText('Preço')).not.toBeInTheDocument()
+  await act(async () => { finish({ ...saved, price: '20.00' }) })
+  expect(await screen.findByLabelText('Preço')).toHaveValue('20.00')
+  fireEvent.change(screen.getByLabelText('Preço'), { target: { value: '25.00' } })
+  vi.mocked(catalogClient.offer).mockResolvedValue({ ...saved, price: '30.00' })
+  await act(async () => { await client.invalidateQueries({ queryKey: ['organizations', 'user', 'org'] }) })
+  expect(screen.getByLabelText('Preço')).toHaveValue('25.00')
+})
+it('does not navigate back to a canceled editor when its slow save completes', async () => {
+  setup(); await screen.findByText('Seu catálogo começa com um produto.'); fireEvent.click(screen.getByRole('button', { name: 'Novo produto' }))
+  fireEvent.change(screen.getByLabelText('Nome do produto'), { target: { value: 'Course' } }); fireEvent.change(screen.getByLabelText('Slug do produto'), { target: { value: 'course' } })
+  let finish!: () => void
+  vi.mocked(catalogClient.saveProduct).mockImplementation(() => new Promise(resolve => { finish = () => resolve({ id: 'abc', organizationId: 'org', name: 'Course', slug: 'course', description: '', imageUrl: '', status: 'DRAFT', createdAt: '', updatedAt: '' }) }))
+  fireEvent.click(screen.getByRole('button', { name: 'Criar produto' })); await waitFor(() => expect(catalogClient.saveProduct).toHaveBeenCalled())
+  fireEvent.click(screen.getByRole('button', { name: 'Cancelar' })); fireEvent.click(screen.getByRole('button', { name: 'Ofertas' }))
+  await act(async () => { finish() })
+  expect(window.location.pathname).toBe('/offers')
 })
