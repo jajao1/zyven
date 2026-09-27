@@ -1,0 +1,2125 @@
+Quero que você desenvolva um SaaS completo de social commerce para produtos digitais, comunidades, assinaturas e serviços.
+
+A proposta central do produto é:
+
+“Crie qualquer oferta e venda pelas suas redes sociais.”
+
+O sistema deve permitir que creators, infoprodutores, agências e vendedores criem uma oferta, compartilhem um link nas redes sociais, recebam pagamentos e façam a entrega automaticamente.
+
+IMPORTANTE:
+
+A aplicação NÃO deve ser centrada em Telegram.
+
+Telegram, Discord, links, arquivos, área de membros e webhooks devem ser apenas formas diferentes de entrega.
+
+O núcleo da arquitetura deverá ser:
+
+Offer
+→ Checkout
+→ Payment
+→ Fulfillment
+
+O objetivo é construir uma plataforma escalável, multi-tenant, moderna e preparada para produção.
+
+A plataforma terá gateway próprio integrado.
+
+Não copiar código, identidade visual, textos, marca, assets ou layout de nenhuma empresa existente.
+
+==================================================
+1. VISÃO DO PRODUTO
+==================================================
+
+O vendedor deverá conseguir:
+
+1. Criar conta
+2. Criar organização/workspace
+3. Criar produto
+4. Criar uma ou mais ofertas
+5. Criar página pública da oferta
+6. Definir preço
+7. Definir forma de entrega
+8. Compartilhar link da oferta
+9. Receber pagamento
+10. Entregar automaticamente
+11. Fazer remarketing
+12. Criar cupons
+13. Criar order bumps
+14. Criar upsells
+15. Criar programa de afiliados
+16. Acompanhar vendas
+17. Acompanhar conversão
+18. Acompanhar campanhas
+19. Acompanhar saldo
+20. Solicitar saque
+21. Gerenciar clientes
+22. Gerenciar assinaturas
+23. Gerenciar integrações
+24. Gerenciar equipe
+25. Gerenciar pixels e tracking
+
+Fluxo principal:
+
+Creator
+→ cria Offer
+→ define Checkout
+→ define Fulfillment
+→ publica link
+
+Cliente
+→ abre link
+→ visualiza oferta
+→ inicia checkout
+→ paga
+→ plataforma confirma pagamento
+→ fulfillment é executado
+→ cliente recebe acesso/produto
+→ eventos são registrados
+→ automações podem ser disparadas
+
+==================================================
+2. STACK OBRIGATÓRIA
+==================================================
+
+Backend:
+
+- .NET 10
+- ASP.NET Core 10
+- C#
+- Entity Framework Core 10
+- PostgreSQL
+- Redis
+- Hangfire
+- FluentValidation
+- Serilog
+- JWT
+- Refresh Tokens
+- OpenAPI
+
+Frontend:
+
+- React
+- TypeScript
+- Vite
+- TailwindCSS
+- shadcn/ui
+- TanStack Query
+- React Hook Form
+- Zod
+- Recharts
+
+Infra:
+
+- Docker
+- Docker Compose
+
+Criar ambiente local executável preferencialmente com:
+
+docker compose up -d
+
+==================================================
+3. PRINCÍPIOS DE IMPLEMENTAÇÃO
+==================================================
+
+Antes de implementar:
+
+1. Analise o repositório inteiro
+2. Identifique código existente
+3. Preserve o que estiver correto
+4. Não reescreva funcionalidades sem necessidade
+5. Se estiver vazio, inicialize a solução
+
+Prioridades:
+
+1. corretude
+2. segurança
+3. consistência financeira
+4. simplicidade
+5. manutenibilidade
+6. observabilidade
+7. performance
+
+Evitar overengineering.
+
+Controllers/endpoints devem ser finos.
+
+Regras de negócio não devem ficar em controllers.
+
+Não deixar mocks permanentes em funcionalidades que já chegaram à fase real de implementação.
+
+==================================================
+4. ESTRUTURA DA SOLUÇÃO
+==================================================
+
+Estrutura sugerida:
+
+/src
+  /Api
+  /Application
+  /Domain
+  /Infrastructure
+  /Workers
+
+/web
+  /src
+    /components
+    /features
+    /hooks
+    /layouts
+    /lib
+    /pages
+    /services
+    /stores
+    /types
+
+/tests
+  /UnitTests
+  /IntegrationTests
+
+==================================================
+5. MULTI-TENANCY
+==================================================
+
+Entidades:
+
+User
+Organization
+OrganizationMember
+
+OrganizationMember:
+
+Id
+OrganizationId
+UserId
+Role
+CreatedAt
+
+Roles:
+
+OWNER
+ADMIN
+OPERATOR
+FINANCE
+SUPPORT
+
+Um usuário poderá participar de várias organizações.
+
+Todos os dados comerciais deverão estar vinculados a OrganizationId quando aplicável.
+
+Nunca confiar apenas no OrganizationId vindo do frontend.
+
+Sempre validar se o usuário autenticado pertence à organização.
+
+Organization A nunca poderá acessar:
+
+- produtos
+- ofertas
+- checkouts
+- pagamentos
+- clientes
+- campanhas
+- automações
+- integrações
+- saldo
+- saques
+- assinaturas
+- afiliados
+
+da Organization B.
+
+Criar testes obrigatórios para tenant isolation.
+
+==================================================
+6. AUTENTICAÇÃO
+==================================================
+
+Endpoints:
+
+POST /api/auth/register
+POST /api/auth/login
+POST /api/auth/refresh
+POST /api/auth/logout
+GET /api/auth/me
+
+Implementar:
+
+- hash seguro de senha
+- access token curto
+- refresh token rotativo
+- revogação
+- sessões
+- rate limiting
+- proteção contra brute force
+
+Nunca armazenar senha em texto puro.
+
+==================================================
+7. ONBOARDING
+==================================================
+
+Após cadastro:
+
+Etapa 1:
+Criar Organization
+
+Etapa 2:
+Informações da empresa
+
+Etapa 3:
+Criar primeiro Product
+
+Etapa 4:
+Criar primeira Offer
+
+Etapa 5:
+Selecionar Fulfillment
+
+Etapa 6:
+Configurar Checkout
+
+Etapa 7:
+Gerar página pública
+
+Etapa 8:
+Publicar link
+
+Mostrar progresso de onboarding.
+
+==================================================
+8. PRODUCT
+==================================================
+
+Criar:
+
+Product
+
+Campos:
+
+Id
+OrganizationId
+Name
+Slug
+Description
+ImageUrl
+Status
+CreatedAt
+UpdatedAt
+
+Status:
+
+DRAFT
+ACTIVE
+INACTIVE
+ARCHIVED
+
+Product representa o produto base.
+
+Uma Product poderá possuir várias Offers.
+
+Exemplo:
+
+Produto:
+Comunidade Premium
+
+Offers:
+Mensal
+Trimestral
+Vitalício
+
+==================================================
+9. OFFER
+==================================================
+
+Offer será uma das entidades centrais do sistema.
+
+Criar:
+
+Offer
+
+Campos:
+
+Id
+OrganizationId
+ProductId
+Name
+Slug
+Headline
+Description
+Price
+Currency
+Status
+BillingType
+CreatedAt
+UpdatedAt
+
+BillingType:
+
+ONE_TIME
+SUBSCRIPTION
+
+Status:
+
+DRAFT
+ACTIVE
+INACTIVE
+ARCHIVED
+
+Nunca confiar no preço enviado pelo frontend.
+
+O backend deverá sempre consultar o valor da Offer.
+
+==================================================
+10. PÁGINA PÚBLICA DA OFERTA
+==================================================
+
+Cada Offer poderá possuir página pública.
+
+URL conceitual:
+
+https://dominio.com/o/{slug}
+
+Criar editor simples para:
+
+- título
+- subtítulo
+- imagem
+- vídeo
+- descrição
+- benefícios
+- preço
+- botão CTA
+- depoimentos
+- FAQ
+- garantia
+- campos customizados
+- tracking pixels
+
+Primeira versão:
+
+editor baseado em blocos simples.
+
+Não construir page builder visual complexo no MVP.
+
+==================================================
+11. CHECKOUT
+==================================================
+
+Criar:
+
+CheckoutSession
+
+Campos:
+
+Id
+OrganizationId
+OfferId
+CustomerId
+CampaignId
+AffiliateId
+Status
+ExpiresAt
+CreatedAt
+
+Status:
+
+CREATED
+PENDING_PAYMENT
+COMPLETED
+EXPIRED
+ABANDONED
+
+Checkout deverá suportar:
+
+- nome
+- email
+- telefone
+- documento quando necessário
+- cupom
+- order bump
+- tracking
+- UTM
+- afiliado
+
+==================================================
+12. ORDER BUMP
+==================================================
+
+Criar:
+
+OrderBump
+
+Campos:
+
+Id
+OrganizationId
+OfferId
+AdditionalOfferId
+Title
+Description
+Price
+Status
+
+Durante checkout:
+
+“Adicione também X por R$ Y”
+
+Se marcado:
+
+adicionar valor à compra.
+
+Toda precificação deve ser calculada server-side.
+
+==================================================
+13. UPSELL
+==================================================
+
+Criar:
+
+Upsell
+
+Campos:
+
+Id
+OrganizationId
+SourceOfferId
+TargetOfferId
+Title
+Description
+Status
+
+Após compra confirmada:
+
+cliente poderá visualizar oferta complementar.
+
+Primeira versão pode exigir novo pagamento.
+
+Arquitetura deve permitir futura implementação de one-click upsell quando suportado.
+
+==================================================
+14. COUPON
+==================================================
+
+Criar:
+
+Coupon
+
+Campos:
+
+Id
+OrganizationId
+Code
+DiscountType
+DiscountValue
+MaxUses
+UsedCount
+StartsAt
+EndsAt
+Status
+
+DiscountType:
+
+FIXED
+PERCENTAGE
+
+Validar cupom server-side.
+
+==================================================
+15. CUSTOMER
+==================================================
+
+Criar:
+
+Customer
+
+Campos:
+
+Id
+OrganizationId
+Name
+Email
+Phone
+Document
+CreatedAt
+UpdatedAt
+
+Não duplicar clientes desnecessariamente.
+
+Criar estratégia para identificar clientes por:
+
+email
+telefone
+
+dentro da mesma Organization.
+
+==================================================
+16. GATEWAY PRÓPRIO
+==================================================
+
+A plataforma possui gateway próprio.
+
+O vendedor NÃO conecta Mercado Pago, Asaas ou similar.
+
+Fluxo:
+
+Checkout
+→ Payment Service
+→ infraestrutura financeira
+→ PIX/cartão
+→ confirmação
+→ ledger
+→ saldo do merchant
+
+Criar abstração:
+
+IPaymentProcessor
+
+E especializações:
+
+IPixProvider
+ICardProvider
+
+Mesmo sendo gateway próprio, não acoplar regras comerciais diretamente ao PSP/banco usado por baixo.
+
+==================================================
+17. MERCHANT ACCOUNT
+==================================================
+
+Cada Organization terá:
+
+MerchantAccount
+
+Campos:
+
+Id
+OrganizationId
+Status
+CreatedAt
+UpdatedAt
+
+Status:
+
+PENDING
+ACTIVE
+SUSPENDED
+BLOCKED
+
+==================================================
+18. PAYMENT
+==================================================
+
+Criar:
+
+Payment
+
+Campos:
+
+Id
+OrganizationId
+MerchantAccountId
+CustomerId
+CheckoutSessionId
+OfferId
+
+GrossAmount
+DiscountAmount
+OrderBumpAmount
+PlatformFee
+NetAmount
+
+Currency
+
+PaymentMethod
+Status
+
+ProviderTransactionId
+ExternalReference
+EndToEndId
+
+PixCode
+QrCodeData
+
+ExpiresAt
+PaidAt
+CreatedAt
+UpdatedAt
+
+PaymentMethod:
+
+PIX
+CARD
+
+Status:
+
+PENDING
+PROCESSING
+PAID
+EXPIRED
+FAILED
+CANCELLED
+REFUNDED
+CHARGEBACK
+
+Nunca utilizar float/double para dinheiro.
+
+Utilizar decimal no C# e NUMERIC/DECIMAL no PostgreSQL.
+
+==================================================
+19. PIX
+==================================================
+
+Endpoint conceitual:
+
+POST /api/checkouts/{checkoutId}/payments/pix
+
+Backend deverá:
+
+1. validar checkout
+2. carregar Offer
+3. validar cupom
+4. validar order bump
+5. calcular total
+6. calcular taxa
+7. criar Payment
+8. criar cobrança PIX
+9. persistir referências
+10. retornar QR Code
+11. retornar copia e cola
+12. retornar data de expiração
+
+Nunca aceitar valor final calculado pelo frontend.
+
+==================================================
+20. CARTÃO
+==================================================
+
+Preparar arquitetura para cartão.
+
+Não é obrigatório integrar adquirente real imediatamente, mas deixar contratos preparados.
+
+Nunca armazenar número completo do cartão ou CVV.
+
+Tokenização deverá ser feita pelo provedor apropriado.
+
+==================================================
+21. WEBHOOK FINANCEIRO
+==================================================
+
+Criar:
+
+POST /webhooks/payments/{provider}
+
+Fluxo:
+
+receber
+→ autenticar
+→ validar assinatura
+→ registrar evento
+→ verificar idempotência
+→ localizar Payment
+→ validar valor
+→ atualizar status
+→ registrar ledger
+→ publicar evento interno
+→ executar Fulfillment
+→ disparar automações
+
+==================================================
+22. WEBHOOK EVENT
+==================================================
+
+Criar:
+
+WebhookEvent
+
+Campos:
+
+Id
+Provider
+ProviderEventId
+EventType
+PayloadHash
+Status
+ReceivedAt
+ProcessedAt
+Error
+
+ProviderEventId deve possuir unique index quando aplicável.
+
+Webhook duplicado não poderá duplicar:
+
+- saldo
+- venda
+- entrega
+- comissão
+- assinatura
+
+==================================================
+23. LEDGER
+==================================================
+
+O saldo financeiro não deverá ser controlado apenas com:
+
+Balance += value
+
+Criar:
+
+LedgerAccount
+LedgerTransaction
+LedgerEntry
+
+Implementar ledger imutável.
+
+Exemplo:
+
+Cliente paga R$ 100
+
+Taxa plataforma:
+R$ 2
+
+Merchant:
+R$ 98
+
+Registrar lançamentos correspondentes.
+
+LedgerEntry não poderá ser alterado ou apagado.
+
+Correções:
+
+criar lançamento compensatório.
+
+==================================================
+24. WALLET
+==================================================
+
+Criar:
+
+MerchantWallet
+
+Exibir:
+
+AvailableBalance
+PendingBalance
+ReservedBalance
+TotalReceived
+TotalWithdrawn
+TotalFees
+
+Ledger deve ser fonte financeira autoritativa.
+
+Wallet pode ser projeção otimizada.
+
+==================================================
+25. FEE RULE
+==================================================
+
+Criar:
+
+Plan
+FeeRule
+
+FeeRule:
+
+Id
+PlanId
+FixedFee
+PercentageFee
+ActiveFrom
+ActiveUntil
+
+Suportar:
+
+R$ 0,50
+ou
+2,99%
+ou
+2,99% + R$ 0,50
+
+Guardar snapshot da regra aplicada em cada Payment.
+
+==================================================
+26. WITHDRAWAL
+==================================================
+
+Criar:
+
+Withdrawal
+
+Campos:
+
+Id
+OrganizationId
+MerchantAccountId
+Amount
+Fee
+NetAmount
+PixKey
+PixKeyType
+Status
+RequestedAt
+ProcessingAt
+CompletedAt
+FailedAt
+FailureReason
+
+Status:
+
+REQUESTED
+PROCESSING
+COMPLETED
+FAILED
+CANCELLED
+
+Fluxo:
+
+validar saldo
+→ reservar saldo atomicamente
+→ criar Withdrawal
+→ processar transferência
+→ confirmar
+→ registrar ledger
+→ liberar reserva
+
+Impedir double-spending.
+
+==================================================
+27. FULFILLMENT
+==================================================
+
+Fulfillment será outro núcleo central do sistema.
+
+Criar:
+
+FulfillmentDefinition
+FulfillmentExecution
+
+Tipos iniciais:
+
+DIGITAL_FILE
+EXTERNAL_LINK
+TELEGRAM_ACCESS
+DISCORD_ACCESS
+MEMBERS_AREA
+WEBHOOK
+MANUAL
+
+Uma Offer poderá possuir um ou vários Fulfillments.
+
+Exemplo:
+
+Offer:
+Curso Premium
+
+Fulfillment:
+MEMBERS_AREA
++
+TELEGRAM_ACCESS
+
+==================================================
+28. DIGITAL FILE
+==================================================
+
+Permitir upload de:
+
+- PDF
+- ZIP
+- imagens
+- ebooks
+- planilhas
+- outros arquivos digitais permitidos
+
+Criar:
+
+DigitalAsset
+
+Gerar acesso protegido.
+
+Evitar URL pública permanente.
+
+Usar URL temporária/assinada quando aplicável.
+
+==================================================
+29. EXTERNAL LINK
+==================================================
+
+Após pagamento:
+
+liberar URL configurada pelo vendedor.
+
+Criar controle para evitar expor link antecipadamente.
+
+==================================================
+30. TELEGRAM ACCESS
+==================================================
+
+Criar módulo Telegram.
+
+Telegram deverá ser integração, não núcleo da aplicação.
+
+Permitir:
+
+- conectar bot
+- validar token com getMe
+- armazenar token criptografado
+- selecionar grupo/canal
+- gerar convite
+- liberar acesso
+- expirar/remover acesso quando aplicável
+
+Criar:
+
+TelegramIntegration
+
+Nunca logar bot token.
+
+==================================================
+31. DISCORD ACCESS
+==================================================
+
+Criar estrutura para:
+
+DiscordIntegration
+
+Permitir futuramente:
+
+- conectar bot
+- selecionar servidor
+- adicionar role
+- remover role
+- liberar acesso após pagamento
+
+==================================================
+32. MEMBERS AREA
+==================================================
+
+Criar área de membros simples.
+
+Entidades:
+
+Course
+Module
+Lesson
+
+Course:
+
+Id
+OrganizationId
+ProductId
+Name
+Description
+
+Module:
+
+Id
+CourseId
+Name
+Order
+
+Lesson:
+
+Id
+ModuleId
+Title
+ContentType
+ContentUrl
+Order
+
+ContentType:
+
+VIDEO
+TEXT
+FILE
+EXTERNAL
+
+Controle de acesso deve depender de Fulfillment/entitlement.
+
+==================================================
+33. WEBHOOK FULFILLMENT
+==================================================
+
+Permitir que vendedor configure endpoint externo.
+
+Após pagamento:
+
+POST para URL configurada.
+
+Enviar payload assinado.
+
+Criar:
+
+WebhookIntegration
+
+Implementar:
+
+- assinatura HMAC
+- retries
+- logs
+- status
+- idempotência
+
+==================================================
+34. MANUAL FULFILLMENT
+==================================================
+
+Permitir fulfillment manual.
+
+Após venda:
+
+criar tarefa pendente no painel.
+
+Exemplo:
+
+“Realizar consultoria”
+“Entrar em contato”
+“Enviar material personalizado”
+
+==================================================
+35. ENTITLEMENTS
+==================================================
+
+Criar:
+
+Entitlement
+
+Campos:
+
+Id
+OrganizationId
+CustomerId
+OfferId
+PaymentId
+Type
+Status
+StartsAt
+ExpiresAt
+RevokedAt
+
+Status:
+
+PENDING
+ACTIVE
+EXPIRED
+REVOKED
+FAILED
+
+Entitlement representa o direito de acesso comprado.
+
+==================================================
+36. SUBSCRIPTIONS
+==================================================
+
+Criar:
+
+Subscription
+
+Campos:
+
+Id
+OrganizationId
+CustomerId
+OfferId
+Status
+CurrentPeriodStart
+CurrentPeriodEnd
+CancelledAt
+CreatedAt
+
+Status:
+
+ACTIVE
+PAST_DUE
+CANCELLED
+EXPIRED
+
+Preparar arquitetura para recorrência real.
+
+Quando assinatura expirar:
+
+revogar entitlements correspondentes.
+
+==================================================
+37. AUTOMAÇÕES
+==================================================
+
+Criar:
+
+Automation
+AutomationTrigger
+AutomationStep
+AutomationExecution
+
+Triggers iniciais:
+
+LEAD_CREATED
+CHECKOUT_STARTED
+PIX_CREATED
+PAYMENT_CONFIRMED
+PAYMENT_FAILED
+PAYMENT_EXPIRED
+FULFILLMENT_COMPLETED
+SUBSCRIPTION_CREATED
+SUBSCRIPTION_EXPIRING
+SUBSCRIPTION_CANCELLED
+
+Actions:
+
+SEND_EMAIL
+SEND_TELEGRAM_MESSAGE
+SEND_WEBHOOK
+WAIT
+CONDITION
+TAG_CUSTOMER
+SEND_OFFER
+
+Jobs devem ser persistentes.
+
+Nunca depender de timers em memória.
+
+==================================================
+38. RECUPERAÇÃO DE CHECKOUT
+==================================================
+
+Exemplo:
+
+PIX_CREATED
+→ esperar 15 minutos
+→ se PENDING, enviar lembrete
+
+esperar 2 horas
+→ se PENDING, enviar novo lembrete
+
+esperar 24 horas
+→ se ainda não pago, encerrar ou enviar última mensagem
+
+==================================================
+39. CAMPAIGNS
+==================================================
+
+Criar:
+
+Campaign
+
+Campos:
+
+Id
+OrganizationId
+Name
+OfferId
+Code
+Source
+Medium
+CampaignName
+Content
+Status
+CreatedAt
+
+Gerar links rastreáveis.
+
+Exemplo:
+
+https://dominio.com/o/oferta?ref=abc123
+
+==================================================
+40. TRACKING
+==================================================
+
+Registrar:
+
+utm_source
+utm_medium
+utm_campaign
+utm_content
+utm_term
+
+Criar:
+
+TrackingEvent
+
+Tipos:
+
+PAGE_VIEW
+CTA_CLICK
+CHECKOUT_STARTED
+COUPON_APPLIED
+ORDER_BUMP_SELECTED
+PIX_CREATED
+PAYMENT_CONFIRMED
+UPSELL_VIEWED
+UPSELL_PURCHASED
+FULFILLMENT_COMPLETED
+
+==================================================
+41. PIXELS
+==================================================
+
+Permitir configurar:
+
+Meta Pixel
+Google Ads
+TikTok Pixel
+
+Preparar estrutura para:
+
+Meta Conversions API
+Google enhanced conversions
+TikTok Events API
+
+Nunca confiar somente em tracking client-side.
+
+Criar estrutura para eventos server-side.
+
+==================================================
+42. AFFILIATES
+==================================================
+
+Criar módulo:
+
+Affiliate
+AffiliateProgram
+AffiliateLink
+AffiliateCommission
+
+Permitir vendedor ativar afiliados por Offer.
+
+Exemplo:
+
+Offer:
+R$ 100
+
+Comissão afiliado:
+30%
+
+Criar link:
+
+https://dominio.com/o/produto?aff=CODIGO
+
+Após venda confirmada:
+
+registrar comissão.
+
+==================================================
+43. COMMISSION LEDGER
+==================================================
+
+Não pagar comissão duplicada.
+
+Criar:
+
+AffiliateCommission
+
+Campos:
+
+Id
+OrganizationId
+AffiliateId
+PaymentId
+Amount
+Status
+CreatedAt
+
+Status:
+
+PENDING
+APPROVED
+CANCELLED
+PAID
+
+Se Payment for refunded:
+
+cancelar comissão quando aplicável.
+
+==================================================
+44. DASHBOARD
+==================================================
+
+Página:
+
+/dashboard
+
+Cards:
+
+- receita hoje
+- receita no período
+- vendas
+- ticket médio
+- conversão
+- checkouts iniciados
+- PIX pendentes
+- clientes novos
+- reembolsos
+- assinaturas ativas
+
+Gráficos:
+
+- receita por dia
+- vendas por dia
+- conversão
+- vendas por Offer
+- vendas por origem
+- vendas por afiliado
+
+==================================================
+45. FUNIL DE CONVERSÃO
+==================================================
+
+Mostrar:
+
+Page View
+↓
+CTA Click
+↓
+Checkout Started
+↓
+Payment Created
+↓
+Payment Confirmed
+↓
+Fulfillment Completed
+
+Calcular conversão entre etapas.
+
+==================================================
+46. CUSTOMERS
+==================================================
+
+Página:
+
+/customers
+
+Mostrar:
+
+- nome
+- email
+- telefone
+- total gasto
+- número de compras
+- assinatura ativa
+- última compra
+- origem
+- cadastro
+
+Página:
+
+/customers/{id}
+
+Mostrar timeline completa.
+
+==================================================
+47. SALES
+==================================================
+
+Página:
+
+/sales
+
+Mostrar:
+
+ID
+Cliente
+Offer
+Valor bruto
+Desconto
+Taxa
+Valor líquido
+Método
+Status
+Data
+
+==================================================
+48. FINANCE
+==================================================
+
+Página:
+
+/finance
+
+Cards:
+
+Saldo disponível
+Saldo pendente
+Saldo reservado
+Total processado
+Total sacado
+Taxas
+
+Tabela:
+
+movimentações recentes.
+
+==================================================
+49. WITHDRAWALS UI
+==================================================
+
+Página:
+
+/finance/withdrawals
+
+Mostrar:
+
+Data
+Valor
+Taxa
+Líquido
+Destino
+Status
+
+Permitir solicitar saque.
+
+==================================================
+50. PRODUCTS UI
+==================================================
+
+Páginas:
+
+/products
+/products/new
+/products/:id
+
+Mostrar:
+
+- produto
+- ofertas
+- status
+- vendas
+- receita
+
+==================================================
+51. OFFERS UI
+==================================================
+
+Páginas:
+
+/offers
+/offers/new
+/offers/:id
+
+Tabs:
+
+Overview
+Pricing
+Checkout
+Page
+Fulfillment
+Tracking
+Affiliates
+Automations
+
+==================================================
+52. CHECKOUT CUSTOMIZATION
+==================================================
+
+Permitir configurar:
+
+Logo
+Cor
+Título
+Descrição
+Campos
+Depoimentos
+Garantia
+Order bumps
+
+Não criar editor complexo demais no MVP.
+
+==================================================
+53. INTEGRATIONS
+==================================================
+
+Página:
+
+/integrations
+
+Categorias:
+
+Payments
+Telegram
+Discord
+Tracking
+Webhooks
+Storage
+Email
+
+==================================================
+54. SETTINGS
+==================================================
+
+Página:
+
+/settings
+
+Subpáginas:
+
+/settings/general
+/settings/team
+/settings/billing
+/settings/security
+/settings/domains
+
+==================================================
+55. CUSTOM DOMAIN
+==================================================
+
+Preparar arquitetura para domínio customizado.
+
+Exemplo:
+
+pay.cliente.com
+
+ou
+
+ofertas.cliente.com
+
+Criar entidade:
+
+CustomDomain
+
+Status:
+
+PENDING
+VERIFIED
+ACTIVE
+FAILED
+
+==================================================
+56. ADMIN DA PLATAFORMA
+==================================================
+
+Criar área:
+
+/admin
+
+Somente SUPER_ADMIN.
+
+Mostrar:
+
+- Organizations
+- Users
+- Merchants
+- Payments
+- GMV
+- Platform Revenue
+- Withdrawals
+- Active Sellers
+- Chargebacks
+- Failed Webhooks
+- System Health
+
+Permitir:
+
+- suspender merchant
+- bloquear saque
+- visualizar ledger
+- visualizar payment
+- visualizar webhook
+- visualizar logs
+
+Nunca permitir edição direta de saldo.
+
+Ajustes financeiros devem gerar lançamento auditável.
+
+==================================================
+57. RECONCILIATION
+==================================================
+
+Criar:
+
+ReconciliationJob
+ReconciliationIssue
+
+Comparar:
+
+transações internas
+vs
+infraestrutura financeira externa
+
+Detectar:
+
+- pagamento perdido
+- webhook perdido
+- valor divergente
+- pagamento duplicado
+- status incorreto
+- saque divergente
+
+Nunca corrigir silenciosamente inconsistência crítica.
+
+==================================================
+58. AUDIT LOG
+==================================================
+
+Criar:
+
+AuditLog
+
+Registrar operações relevantes:
+
+- criação de Offer
+- alteração de preço
+- alteração de fee
+- saque
+- suspensão
+- refund
+- alteração de integração
+- ações administrativas
+
+==================================================
+59. SECURITY
+==================================================
+
+Obrigatório:
+
+- rate limiting
+- tenant isolation
+- JWT seguro
+- refresh token rotation
+- CORS
+- validation
+- encryption of secrets
+- webhook signature validation
+- idempotency
+- audit logs
+- correlation IDs
+- structured logging
+- secure headers
+- input validation
+- permission checks
+- transactional financial operations
+
+Nunca logar:
+
+- senha
+- token de bot
+- API secret
+- Authorization header
+- dados sensíveis desnecessários
+
+==================================================
+60. OBSERVABILITY
+==================================================
+
+Criar:
+
+/health
+/health/ready
+
+Adicionar:
+
+- structured logs
+- request duration
+- correlation ID
+- job logs
+- webhook logs
+
+==================================================
+61. DATABASE
+==================================================
+
+Criar migrations.
+
+Criar índices para:
+
+OrganizationId
+Customer Email
+Customer Phone
+Offer Slug
+Payment Status
+Payment ExternalReference
+ProviderTransactionId
+Campaign Code
+Affiliate Code
+CreatedAt
+
+Criar unique constraints onde necessário.
+
+==================================================
+62. BACKGROUND JOBS
+==================================================
+
+Criar workers para:
+
+- payment reconciliation
+- expired PIX
+- expired checkout
+- subscription expiration
+- entitlement expiration
+- automation execution
+- webhook retries
+- payout processing
+- stale session cleanup
+
+==================================================
+63. TESTES
+==================================================
+
+Criar testes obrigatórios para:
+
+Auth
+Tenant isolation
+Product
+Offer
+Checkout
+Coupon
+Order bump
+Payment
+Webhook
+Duplicate webhook
+Ledger
+Wallet
+Fulfillment
+Subscription
+Affiliate commission
+Withdrawal
+Concurrent withdrawal
+Refund
+Entitlement
+Automation
+Tracking
+
+Especialmente:
+
+Organization A nunca acessa dados da B.
+
+Webhook duplicado nunca duplica saldo.
+
+Dois saques simultâneos não gastam o mesmo saldo.
+
+Refund deve gerar movimentações compensatórias.
+
+==================================================
+64. DOCKER
+==================================================
+
+Criar Docker Compose com:
+
+API
+Worker
+Frontend
+PostgreSQL
+Redis
+
+Um único comando deverá levantar ambiente local.
+
+==================================================
+65. SEED
+==================================================
+
+Criar seed de Development:
+
+Organization demo
+
+Product:
+Comunidade Premium
+
+Offers:
+Mensal
+Vitalício
+
+Outro Product:
+Curso Social Selling
+
+Fulfillment:
+Members Area
+Telegram
+
+Criar customer, campaign e transações de exemplo.
+
+==================================================
+66. README
+==================================================
+
+Criar README detalhado contendo:
+
+- arquitetura
+- execução local
+- variáveis de ambiente
+- Docker
+- migrations
+- pagamentos
+- webhooks
+- ledger
+- fulfillment
+- Telegram
+- Discord
+- tracking
+- afiliados
+- testes
+- segurança
+
+==================================================
+67. UX / UI
+==================================================
+
+Criar interface SaaS moderna e limpa.
+
+Sidebar:
+
+Dashboard
+
+Vendas
+- Pedidos
+- Pagamentos
+- Clientes
+
+Produtos
+- Produtos
+- Ofertas
+
+Marketing
+- Campanhas
+- Afiliados
+- Automações
+- Pixels
+
+Entrega
+- Arquivos
+- Área de membros
+- Integrações
+
+Financeiro
+- Saldo
+- Saques
+
+Configurações
+
+Topo:
+
+Organization switcher
+Notificações
+Perfil
+
+Não copiar visual de plataformas existentes.
+
+==================================================
+68. MOBILE
+==================================================
+
+Dashboard deve funcionar bem em desktop e mobile.
+
+Páginas públicas de oferta e checkout devem ser mobile-first.
+
+==================================================
+69. PERFORMANCE
+==================================================
+
+Evitar N+1.
+
+Paginar listas.
+
+Usar índices adequados.
+
+Não carregar grandes relacionamentos sem necessidade.
+
+Usar Redis somente quando realmente fizer sentido.
+
+==================================================
+70. EVENTOS INTERNOS
+==================================================
+
+Criar eventos de domínio/aplicação:
+
+OfferPublished
+CheckoutStarted
+PaymentCreated
+PaymentConfirmed
+PaymentRefunded
+FulfillmentRequested
+FulfillmentCompleted
+EntitlementCreated
+SubscriptionCreated
+WithdrawalRequested
+
+Evitar acoplamento direto entre módulos.
+
+==================================================
+71. ARQUITETURA CONCEITUAL FINAL
+==================================================
+
+O núcleo deve ser:
+
+Product
+↓
+Offer
+↓
+Checkout
+↓
+Payment
+↓
+Entitlement
+↓
+Fulfillment
+
+Marketing e growth:
+
+Campaign
+Affiliate
+Tracking
+Automation
+
+Financeiro:
+
+MerchantAccount
+Payment
+Ledger
+Wallet
+Withdrawal
+
+Integrações:
+
+Telegram
+Discord
+Webhook
+Pixels
+Storage
+Email
+
+==================================================
+72. ORDEM DE IMPLEMENTAÇÃO
+==================================================
+
+Implementar em fases.
+
+FASE 1
+Solution + Docker + PostgreSQL + Redis + Auth
+
+FASE 2
+Organizations + Multi-tenancy + Roles
+
+FASE 3
+Products + Offers
+
+FASE 4
+Public Offer Page + Checkout
+
+FASE 5
+Customers
+
+FASE 6
+Payment core + PIX abstraction
+
+FASE 7
+Webhook + PaymentConfirmed + Idempotency
+
+FASE 8
+Ledger + Wallet + Fee Rules
+
+FASE 9
+Fulfillment core + Entitlements
+
+FASE 10
+Digital File + External Link
+
+FASE 11
+Telegram
+
+FASE 12
+Members Area
+
+FASE 13
+Subscriptions
+
+FASE 14
+Dashboard + Sales + Customers UI
+
+FASE 15
+Coupons + Order Bump + Upsell
+
+FASE 16
+Tracking + Campaigns + Pixels
+
+FASE 17
+Automations + Checkout Recovery
+
+FASE 18
+Affiliates
+
+FASE 19
+Withdrawals
+
+FASE 20
+Discord + Webhook Fulfillment
+
+FASE 21
+Admin
+
+FASE 22
+Reconciliation
+
+FASE 23
+Security hardening
+
+FASE 24
+Tests
+
+FASE 25
+Documentation + polish
+
+==================================================
+73. REGRA DE EXECUÇÃO
+==================================================
+
+Após cada fase:
+
+1. Compile backend
+2. Execute testes
+3. Compile frontend
+4. Execute lint
+5. Corrija todos os erros
+6. Verifique migrations
+7. Faça smoke test do fluxo implementado
+8. Documente o que foi feito
+9. Faça commit Git pequeno e descritivo, se permitido
+
+Não avance de fase deixando erro conhecido.
+
+==================================================
+74. PRIMEIRO FLUXO END-TO-END OBRIGATÓRIO
+==================================================
+
+O primeiro fluxo funcional completo deverá ser:
+
+1. usuário cria conta
+2. cria Organization
+3. cria Product
+4. cria Offer
+5. define fulfillment EXTERNAL_LINK
+6. publica oferta
+7. cliente abre página pública
+8. inicia checkout
+9. PIX é criado
+10. webhook simulado confirma pagamento
+11. ledger registra pagamento
+12. saldo do merchant é atualizado
+13. Entitlement é criado
+14. Fulfillment é executado
+15. cliente recebe link
+16. dashboard registra venda
+
+Somente depois desse fluxo funcionar ponta a ponta, expandir para integrações adicionais.
+
+==================================================
+75. IMPORTANTE
+==================================================
+
+Não trate Telegram como entidade central.
+
+Telegram é apenas um Fulfillment/Integration.
+
+Não trate checkout como simples tela.
+
+Checkout é uma sessão de venda persistente.
+
+Não trate saldo como campo editável.
+
+O ledger é a fonte autoritativa.
+
+Não trate pagamento como confiável até confirmação server-side.
+
+Não implemente regras financeiras críticas no frontend.
+
+Não confie em valores enviados pelo cliente.
+
+Não permita cross-tenant access.
+
+Não permita webhook duplicado gerar efeito duplicado.
+
+Não permita saque concorrente consumir saldo duas vezes.
+
+Comece pela FASE 1 e avance sequencialmente.
