@@ -1,9 +1,21 @@
 import { useSyncExternalStore } from 'react'
 const subscribe = (callback: () => void) => { window.addEventListener('popstate', callback); return () => window.removeEventListener('popstate', callback) }
-export function navigateCatalog(path: string, org: string) { window.history.pushState(null, '', `${path}?organization=${encodeURIComponent(org)}`); window.dispatchEvent(new PopStateEvent('popstate')) }
+export type WorkspaceView = 'overview' | 'products' | 'offers' | 'customers' | 'team' | 'settings' | 'organizations'
+export function navigateWorkspace(path: string, org: string) {
+  const query = new URLSearchParams()
+  if (org) query.set('organization', org)
+  window.history.pushState(null, '', query.size ? `${path}?${query}` : path)
+  window.dispatchEvent(new PopStateEvent('popstate'))
+}
+export const navigateCatalog = navigateWorkspace
+export function readWorkspaceLocation(location: string) {
+  const [path, query = ''] = location.split('?')
+  const catalog = /^\/(products|offers)(?:\/(new|[a-f0-9-]+))?$/.exec(path)
+  const simple = /^\/(dashboard|customers|team|settings)\/?$/.exec(path)?.[1]
+  const view: WorkspaceView = catalog?.[1] as 'products' | 'offers' ?? (simple === 'dashboard' ? 'overview' : simple as WorkspaceView | undefined) ?? 'organizations'
+  return { view, kind: catalog?.[1] as 'products' | 'offers' | undefined, item: catalog?.[2], org: new URLSearchParams(query).get('organization') ?? '' }
+}
 export function useCatalogLocation() {
   const location = useSyncExternalStore(subscribe, () => window.location.pathname + window.location.search)
-  const [path, query] = location.split('?')
-  const match = /^\/(products|offers)(?:\/(new|[a-f0-9-]+))?$/.exec(path)
-  return { kind: match?.[1] as 'products' | 'offers' | undefined, item: match?.[2], org: new URLSearchParams(query).get('organization') ?? '' }
+  return readWorkspaceLocation(location)
 }
