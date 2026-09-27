@@ -14,10 +14,10 @@ CRUD sem exclusão física (arquivamento via status) em `/api/organizations/{org
 
 ## Interface e testes
 
-- [ ] Listar/criar/editar produtos e ofertas na organização ativa, incluindo preço e status; manter interface responsiva e formulários validados.
-- [ ] Testes de isolamento para leitura, atualização, listagem e vínculo de produto; papéis sem permissão de escrita.
-- [ ] Testes de preço, precisão, slug duplicado e campos inválidos; comprovar persistência no PostgreSQL real.
-- [ ] Migration com índices de organização, slug e CreatedAt; gate completo de build/testes/lint/modelo/smoke/revisão.
-- [ ] Documentar evidências e criar commits antes da fase 4.
+- [x] Listar/criar/editar produtos e ofertas na organização ativa, incluindo preço e status; manter interface responsiva e formulários validados.
+- [x] Testes de isolamento para leitura, atualização, listagem e vínculo de produto; papéis sem permissão de escrita.
+- [x] Testes de preço, precisão, slug duplicado e campos inválidos; comprovar persistência no PostgreSQL real.
+- [x] Migration com índices de organização, slug e CreatedAt; gate completo de build/testes/lint/modelo/smoke/revisão.
+- [x] Documentar evidências e criar commits antes da fase 4.
 
 As páginas de catálogo devem ter navegação real em /products, /products/new, /products/:id e /offers, /offers/new, /offers/:id, respeitando contexto de organização e identidade no cache. Auditoria registra criação/alteração de ofertas e preços. Métricas de vendas/receita e abas dependentes de fases futuras não devem apresentar dados fictícios.
