@@ -10,3 +10,5 @@ Concluída em 27/09/2026 sobre os commits c704f9f e 3ffb5e8.
 - Isolamento bidirecional entre organizações e proteção concorrente do último OWNER exercitados com PostgreSQL real.
 
 Não há convites por e-mail nem dados comerciais nesta fase. A inclusão na equipe usa contas já cadastradas. A fase 3 começa somente após este fechamento.
+
+CI Linux também aprovada sobre 1f1a1fc: https://github.com/jajao1/zyven/actions/runs/36339588341 (backend e frontend).
