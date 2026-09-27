@@ -1,6 +1,6 @@
 # Zyven
 
-SaaS de social commerce. A especificação mestre está em [`docs/zyven-master-spec.txt`](docs/zyven-master-spec.txt). O desenvolvimento segue suas fases; as fases 1 a 4 implementam base, autenticação, organizações, equipe, catálogo, página pública e checkout persistente. Clientes são a próxima etapa.
+SaaS de social commerce. A especificação mestre está em [`docs/zyven-master-spec.txt`](docs/zyven-master-spec.txt). O desenvolvimento segue suas fases; as fases 1 a 5 implementam base, autenticação, organizações, equipe, catálogo, página pública, checkout persistente e clientes por organização.
 
 ## Executar localmente
 
@@ -88,8 +88,10 @@ Para desenvolver o frontend com a API do Compose: `cd web`, `npm ci`, `npm run d
 
 ## Evolução
 
-As fases seguintes acrescentam clientes, pagamentos e confirmação idempotente, ledger e entrega. O primeiro fluxo completo deve terminar em `EXTERNAL_LINK` com pagamento confirmado no servidor. Telegram e Discord permanecem integrações. A fonte financeira será o ledger imutável, nunca um saldo editável. APIs e credenciais financeiras reais serão configuradas na fase correspondente; dados simulados não serão tratados como dinheiro real.
+As fases seguintes acrescentam pagamentos e confirmação idempotente, ledger e entrega. O primeiro fluxo completo deve terminar em `EXTERNAL_LINK` com pagamento confirmado no servidor. Telegram e Discord permanecem integrações. A fonte financeira será o ledger imutável, nunca um saldo editável. APIs e credenciais financeiras reais serão configuradas na fase correspondente; dados simulados não serão tratados como dinheiro real.
 
 Catálogo e smoke específico: [docs/catalog.md](docs/catalog.md). Estado e dependências: [docs/implementation-status.md](docs/implementation-status.md).
 
 Página pública e checkout: [docs/public-checkout.md](docs/public-checkout.md). A etapa de pagamento ainda não está disponível; criar checkout não confirma compra nem produz cobrança.
+
+Clientes, normalização e proteção de perfil: [docs/customers.md](docs/customers.md). `./scripts/smoke-customers.ps1` verifica deduplicação, isolamento e privacidade no ambiente local.

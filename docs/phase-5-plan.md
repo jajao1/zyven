@@ -6,9 +6,9 @@ Identificar por e-mail normalizado e telefone normalizado dentro da organizaçã
 
 Vincular a criação do checkout ao Customer, resolvendo OrganizationId pela oferta. Endpoints administrativos de consulta paginada e detalhe exigem vínculo e permissões persistidos. A UI completa de timeline/vendas pertence à fase 14; nesta fase, implementar a base funcional sem histórico de vendas fictício.
 
-- [ ] Testes de isolamento, normalização, duplicação concorrente, conflito e checkout com CustomerId.
-- [ ] Migration com índices de OrganizationId, Email e Phone.
-- [ ] Gates completos e smoke antes de iniciar Payment.
+- [x] Testes de isolamento, normalização, duplicação concorrente, conflito e checkout com CustomerId.
+- [x] Migration com índices de OrganizationId, Email e Phone.
+- [x] Gates completos e smoke antes de iniciar Payment.
 
 A fase 6 precisa identificar o PSP/banco e sua documentação para cobranças PIX reais. A abstração IPaymentProcessor/IPixProvider/ICardProvider deve manter detalhes do fornecedor fora das regras comerciais.
 
