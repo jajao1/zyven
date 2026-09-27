@@ -1,3 +1,6 @@
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -5,6 +8,22 @@ namespace IntegrationTests;
 
 public class PublicCheckoutTests
 {
+    private sealed class IsolatedPublicIp : IStartupFilter
+    {
+        private readonly IPAddress ip = new(Guid.NewGuid().ToByteArray());
+        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => builder =>
+        {
+            builder.Use(async (context, following) => { context.Connection.RemoteIpAddress = ip; await following(); }); next(builder);
+        };
+    }
+    [Fact]
+    public async Task Anonymous_checkout_creation_is_rate_limited()
+    {
+        await using var app = new WebApplicationFactory<Program>().WithWebHostBuilder(builder => builder.ConfigureServices(services => services.AddSingleton<IStartupFilter>(new IsolatedPublicIp())));
+        using var client = app.CreateClient(); client.DefaultRequestHeaders.Add("X-Zyven-Client", "web");
+        for (var i = 0; i < 60; i++) Assert.Equal(HttpStatusCode.NotFound, (await client.PostAsJsonAsync("/api/public/offers/missing/checkouts", Buyer)).StatusCode);
+        var limited = await client.PostAsJsonAsync("/api/public/offers/missing/checkouts", Buyer); Assert.Equal(HttpStatusCode.TooManyRequests, limited.StatusCode); Assert.Equal("900", limited.Headers.GetValues("Retry-After").Single());
+    }
     private static async Task<(HttpClient Client, Guid Org, Guid Offer, string Slug)> Fixture(WebApplicationFactory<Program> app)
     {
         var client = app.CreateClient(new() { HandleCookies = false }); client.DefaultRequestHeaders.Add("X-Zyven-Client", "web");
@@ -26,7 +45,7 @@ public class PublicCheckoutTests
         await using var app = new WebApplicationFactory<Program>(); var fixture = await Fixture(app); using var owner = fixture.Client; using var client = app.CreateClient(new() { HandleCookies = false }); client.DefaultRequestHeaders.Add("X-Zyven-Client", "web");
         var page = await client.GetAsync($"/api/public/offers/{fixture.Slug}"); page.EnsureSuccessStatusCode(); var json = await page.Content.ReadAsStringAsync(); Assert.DoesNotContain("organizationId", json); Assert.DoesNotContain("productId", json); Assert.DoesNotContain("accessHash", json);
         var created = await client.PostAsJsonAsync($"/api/public/offers/{fixture.Slug}/checkouts", Buyer); Assert.Equal(HttpStatusCode.Created, created.StatusCode);
-        var checkout = await created.Content.ReadFromJsonAsync<Zyven.Application.CheckoutResponse>(); Assert.Equal("19.90", checkout!.Price); Assert.Equal("CREATED", checkout.Status);
+        var checkout = await created.Content.ReadFromJsonAsync<Zyven.Application.CheckoutResponse>(); Assert.Equal("19.90", checkout!.Price); Assert.Equal("CREATED", checkout.Status); Assert.Equal(fixture.Slug, checkout.OfferSlug);
         var cookie = created.Headers.GetValues("Set-Cookie").Single(); Assert.Contains("httponly", cookie); Assert.Contains("samesite=strict", cookie); Assert.Contains($"path=/api/public/checkouts/{checkout.Id}", cookie);
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/public/checkouts/{checkout.Id}")).StatusCode);
         client.DefaultRequestHeaders.Add("Cookie", cookie.Split(';')[0]);
