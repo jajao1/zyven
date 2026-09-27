@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
@@ -28,6 +28,8 @@ export function PublicOfferPage({ slug }: { slug: string }) {
   const [checkoutId, setCheckoutId] = useState(() => new URLSearchParams(window.location.search).get('checkout'))
   const [created, setCreated] = useState<Checkout | null>(null)
   const offer = useQuery({ queryKey: ['public-offer', slug], queryFn: () => pageClient.offer(slug), retry: false })
+  const title = offer.data && !offer.error ? `${offer.data.page.title} — Zyven` : 'Oferta — Zyven'
+  useEffect(() => { document.title = title }, [title])
   const checkout = useQuery({ queryKey: ['public-checkout', checkoutId], queryFn: () => pageClient.checkout(checkoutId!), enabled: !!checkoutId && !created, retry: false, gcTime: 0, staleTime: 0 })
   function complete(value: Checkout) { setCreated(value); setCheckoutId(value.id); window.history.replaceState(null, '', `${window.location.pathname}?checkout=${encodeURIComponent(value.id)}`) }
   function restart() { setCreated(null); setCheckoutId(null); window.history.replaceState(null, '', window.location.pathname) }
