@@ -11,3 +11,7 @@ Vincular a criação do checkout ao Customer, resolvendo OrganizationId pela ofe
 - [ ] Gates completos e smoke antes de iniciar Payment.
 
 A fase 6 precisa identificar o PSP/banco e sua documentação para cobranças PIX reais. A abstração IPaymentProcessor/IPixProvider/ICardProvider deve manter detalhes do fornecedor fora das regras comerciais.
+
+Não usar e-mail/telefone fornecidos anonimamente como prova de identidade. Reaproveitar CustomerId não autoriza devolver o perfil existente nem sobrescrever seus dados com qualquer novo checkout. Manter os dados capturados no checkout e preservar o perfil já existente; correções de perfil exigem fluxo autorizado. Respostas de checkout não devem revelar nomes/documentos/telefones antigos associados ao mesmo e-mail. Conflitos públicos usam mensagem genérica sem enumerar clientes.
+
+Normalização: trim e casing estável para e-mail, sem remover pontos/aliases do endereço; telefone com formato internacional explícito e normalização documentada. Consultas e índices sempre incluem OrganizationId. Testar que outro comprador não obtém PII de registros existentes usando o mesmo e-mail.
