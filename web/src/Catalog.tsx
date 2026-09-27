@@ -1,3 +1,4 @@
+import { OfferPageEditor } from './OfferPageEditor'
 import { useState, useId, useRef, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm, useWatch } from 'react-hook-form'
@@ -66,7 +67,7 @@ function CatalogDetail({ org, userId, kind, id, canWrite, done }: { org: string;
   if (id !== 'new' && query.isPending) return <p role="status">Carregando item...</p>
   if (query.error) return <><ErrorNotice error={query.error} /><Button variant="outline" onClick={() => void query.refetch()}>Tentar novamente</Button></>
   if (!canWrite) return <div><p>Seu papel permite apenas consultar o catálogo.</p>{query.data && <><h3>{query.data.name}</h3><p>{query.data.description}</p><p>{statusNames[query.data.status]}</p>{offer.data && <p>{offer.data.currency} {offer.data.price}</p>}</>}</div>
-  return kind === 'products' ? <ProductEditor org={org} item={product.data} done={done} /> : <OfferEditor org={org} userId={userId} item={offer.data} done={done} />
+  return kind === 'products' ? <ProductEditor org={org} item={product.data} done={done} /> : <><OfferEditor org={org} userId={userId} item={offer.data} done={done} />{offer.data && <OfferPageEditor org={org} userId={userId} offer={offer.data.id} slug={offer.data.slug} />}</>
 }
 export function Catalog({ org, userId, role }: { org: string; userId: string; role: Role }) {
   const location = useCatalogLocation()
