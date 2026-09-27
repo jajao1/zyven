@@ -23,4 +23,4 @@ Não-membros recebem 404. IDs de membro são consultados junto do OrganizationId
 
 Listas retornam `{ items, page, pageSize, total }`, com pageSize entre 1 e 100 e validação contra overflow do deslocamento. Adicionar equipe não envia convite, e-mail ou outra mensagem externa.
 
-No frontend, seleção de organização permanece em memória; os dados do workspace usam chaves de cache com OrganizationId. A autorização da interface é apenas apresentação: a API revalida cada operação no banco. Recursos comerciais acrescentados nas fases seguintes devem reutilizar essa fronteira e incluir OrganizationId nas consultas e vínculos.
+No frontend, a navegação do catálogo carrega o contexto de organização na URL; os dados do workspace usam chaves de cache com UserId e OrganizationId. A autorização da interface é apenas apresentação: a API revalida cada operação no banco. Recursos comerciais acrescentados nas fases seguintes devem reutilizar essa fronteira e incluir OrganizationId nas consultas e vínculos.

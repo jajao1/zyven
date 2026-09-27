@@ -14,10 +14,10 @@ Nesta fase, o checkout coleta dados e apresenta o total. Não indicar pagamento 
 
 ## Verificação
 
-- [ ] Testes de página ativa/inativa e ausência de campos internos.
-- [ ] Preço enviado pelo cliente não altera o total, sessão persiste e expira, credencial ausente/inválida não acessa dados.
-- [ ] Interface pública responsiva e formulário de checkout com erros claros.
-- [ ] Migration, build, testes, lint, verificação do modelo e smoke pelo Compose.
-- [ ] Revisão e commits antes da fase 5.
+- [x] Testes de página ativa/inativa e ausência de campos internos.
+- [x] Preço enviado pelo cliente não altera o total, sessão persiste e expira, credencial ausente/inválida não acessa dados.
+- [x] Interface pública responsiva e formulário de checkout com erros claros.
+- [x] Migration, build, testes, lint, verificação do modelo e smoke pelo Compose.
+- [x] Revisão e commits antes da fase 5.
 
 Segurança do conteúdo: renderizar texto escapado, sem HTML cru. Imagens/vídeos somente por URLs HTTPS validadas, sem credenciais embutidas nem esquemas javascript/data. Não buscar URLs externas no backend. Credencial de checkout fora de URLs e logs; proteger mutações públicas contra requisições cross-site e usar expiração absoluta. Não enviar dados de cliente em respostas públicas da oferta. Limitar tamanhos de request e coleções.

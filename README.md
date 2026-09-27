@@ -1,6 +1,6 @@
 # Zyven
 
-SaaS de social commerce. A especificação mestre está em [`docs/zyven-master-spec.txt`](docs/zyven-master-spec.txt). O desenvolvimento segue suas fases; as fases 1 a 3 implementam base, autenticação, organizações, equipe e catálogo de produtos/ofertas. Página pública e checkout são a próxima etapa.
+SaaS de social commerce. A especificação mestre está em [`docs/zyven-master-spec.txt`](docs/zyven-master-spec.txt). O desenvolvimento segue suas fases; as fases 1 a 4 implementam base, autenticação, organizações, equipe, catálogo, página pública e checkout persistente. Clientes são a próxima etapa.
 
 ## Executar localmente
 
@@ -37,7 +37,7 @@ O Compose é um ambiente de **Development**. Em produção, configurar TLS no pr
 
 `src/Domain` contém entidades; `src/Application`, contratos e validação; `src/Infrastructure`, persistência e serviços; `src/Api`, HTTP; `src/Workers`, processamento Hangfire. `web` usa React, TypeScript, Vite, Tailwind, componentes shadcn/ui, TanStack Query, React Hook Form e Zod. Recharts está disponível para a fase de dashboard.
 
-O núcleo comercial será **Product → Offer → Checkout → Payment → Entitlement → Fulfillment**. Organizações e isolamento estão implementados; veja [`docs/organizations.md`](docs/organizations.md) para endpoints e permissões. Nenhum identificador de organização enviado pelo cliente deve conferir acesso por si só. Pagamentos, ledger, saldo, saques e integrações não são implementados nesta base.
+O núcleo comercial segue **Product → Offer → Checkout → Payment → Entitlement → Fulfillment**. Organizações e isolamento estão implementados; veja [`docs/organizations.md`](docs/organizations.md) para endpoints e permissões. Nenhum identificador de organização enviado pelo cliente deve conferir acesso por si só. Pagamentos, ledger, saldo, saques e integrações não são implementados nesta base.
 
 ## Autenticação
 
@@ -88,6 +88,8 @@ Para desenvolver o frontend com a API do Compose: `cd web`, `npm ci`, `npm run d
 
 ## Evolução
 
-As fases seguintes acrescentam página pública/checkout, clientes, pagamentos e confirmação idempotente, ledger e entrega. O primeiro fluxo completo deve terminar em `EXTERNAL_LINK` com pagamento confirmado no servidor. Telegram e Discord permanecem integrações. A fonte financeira será o ledger imutável, nunca um saldo editável. APIs e credenciais financeiras reais serão configuradas na fase correspondente; dados simulados não serão tratados como dinheiro real.
+As fases seguintes acrescentam clientes, pagamentos e confirmação idempotente, ledger e entrega. O primeiro fluxo completo deve terminar em `EXTERNAL_LINK` com pagamento confirmado no servidor. Telegram e Discord permanecem integrações. A fonte financeira será o ledger imutável, nunca um saldo editável. APIs e credenciais financeiras reais serão configuradas na fase correspondente; dados simulados não serão tratados como dinheiro real.
 
 Catálogo e smoke específico: [docs/catalog.md](docs/catalog.md). Estado e dependências: [docs/implementation-status.md](docs/implementation-status.md).
+
+Página pública e checkout: [docs/public-checkout.md](docs/public-checkout.md). A etapa de pagamento ainda não está disponível; criar checkout não confirma compra nem produz cobrança.

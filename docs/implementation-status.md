@@ -7,8 +7,8 @@ A especificação mestre permanece a autoridade. Este mapa registra a sequência
 | 1 | Solution, Compose, PostgreSQL, Redis, Auth | Validada e enviada |
 | 2 | Organizações, isolamento, equipe e papéis | Validada e enviada |
 | 3 | Produtos e ofertas | Validada e enviada |
-| 4 | Editor simples, página pública e checkout persistente | Próxima fase |
-| 5 | Clientes e identificação por organização | Planejada |
+| 4 | Editor simples, página pública e checkout persistente | Validada e enviada |
+| 5 | Clientes e identificação por organização | Próxima fase |
 | 6 | Payment core, MerchantAccount e abstração PIX | Depende da infraestrutura financeira definida |
 | 7 | Webhook assinado, confirmação e idempotência | Pendente |
 | 8 | Ledger imutável, wallet e regras de taxas | Pendente |
