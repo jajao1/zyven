@@ -1,3 +1,5 @@
+import { Catalog } from './Catalog'
+import { useCatalogLocation, navigateCatalog } from './lib/catalog-navigation'
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Building2, Plus, Users } from 'lucide-react'
@@ -51,6 +53,7 @@ function Workspace({ id, userId, onLostAccess }: { id: string; userId: string; o
     <div className="section-heading"><div><p className="eyebrow">Organização ativa</p><h2>{organization.name}</h2></div><span className="role-badge">{roleNames[organization.role]}</span></div>
     {canManage && <form className="inline-form" onSubmit={event => { event.preventDefault(); rename.mutate() }}><div className="field"><Label htmlFor="org-name">Nome da organização</Label><Input id="org-name" maxLength={100} required value={name ?? organization.name} onChange={event => setName(event.target.value)} /></div><Button variant="outline" disabled={rename.isPending || !(name ?? organization.name).trim()}>Salvar nome</Button></form>}
     <ErrorNotice error={rename.error} />
+    <Catalog org={id} userId={userId} role={organization.role} />
     <div className="team-heading"><Users size={20} /><h3>Equipe</h3></div>
     <p className="section-copy">Cada pessoa acessa esta organização de acordo com seu papel.</p>
     {canManage && <form className="member-form" onSubmit={event => { event.preventDefault(); add.mutate() }}><div className="field"><Label htmlFor="member-email">E-mail da pessoa</Label><Input id="member-email" type="email" required maxLength={254} placeholder="pessoa@exemplo.com" value={email} onChange={event => setEmail(event.target.value)} /><p className="field-help">A pessoa precisa ter uma conta na Zyven.</p></div><div className="field"><Label htmlFor="new-role">Papel</Label><select id="new-role" value={assignableRole} onChange={event => setRole(event.target.value as Role)}><RoleOptions owner={organization.role === 'OWNER'} /></select></div><Button disabled={add.isPending}><Plus size={16} />Adicionar membro</Button></form>}
@@ -61,19 +64,21 @@ function Workspace({ id, userId, onLostAccess }: { id: string; userId: string; o
 export function Organizations({ userId }: { userId: string }) {
   const client = useQueryClient()
   const [page, setPage] = useState(1)
-  const [selected, setSelected] = useState('')
+  const route = useCatalogLocation()
+  const [chosen, setSelected] = useState('')
+  const selected = route.org || chosen
   const [name, setName] = useState('')
   const list = useQuery({ queryKey: ['organizations', userId, 'list', page], queryFn: () => api.list(page), retry: false })
-  const create = useMutation({ mutationFn: () => api.create(name.trim()), onSuccess: async organization => { setName(''); setSelected(organization.id); await client.invalidateQueries({ queryKey: ['organizations', userId] }) } })
+  const create = useMutation({ mutationFn: () => api.create(name.trim()), onSuccess: async organization => { setName(''); setSelected(organization.id); navigateCatalog('/products', organization.id); await client.invalidateQueries({ queryKey: ['organizations', userId] }) } })
   return <section className="organizations-panel"><div className="section-heading"><div><p className="eyebrow">Seu trabalho, em equipe</p><h2>Suas organizações</h2></div><Building2 size={28} /></div>
     <p className="section-copy">Escolha um espaço para trabalhar ou crie uma nova organização.</p>
     {list.isPending ? <p role="status">Carregando organizações...</p> : list.error ? <><ErrorNotice error={list.error} /><Button variant="outline" onClick={() => void list.refetch()}>Recarregar organizações</Button></> : <>
       {!list.data?.total && <p>Você ainda não participa de uma organização.</p>}
-      {!!list.data?.items.length && <div className="field"><Label htmlFor="active-org">Organização ativa</Label><select id="active-org" value={list.data.items.some(item => item.id === selected) ? selected : ''} onChange={event => setSelected(event.target.value)}><option value="">Selecione uma organização</option>{list.data.items.map(item => <option key={item.id} value={item.id}>{item.name} · {roleNames[item.role]}</option>)}</select></div>}
+      {!!list.data?.items.length && <div className="field"><Label htmlFor="active-org">Organização ativa</Label><select id="active-org" value={list.data.items.some(item => item.id === selected) ? selected : ''} onChange={event => { setSelected(event.target.value); navigateCatalog('/products', event.target.value) }}><option value="">Selecione uma organização</option>{list.data.items.map(item => <option key={item.id} value={item.id}>{item.name} · {roleNames[item.role]}</option>)}</select></div>}
       <Pagination data={list.data} page={page} setPage={setPage} />
     </>}
     <form className="inline-form create-org" onSubmit={event => { event.preventDefault(); create.mutate() }}><div className="field"><Label htmlFor="new-org">Nome da nova organização</Label><Input id="new-org" required maxLength={100} placeholder="Ex.: Estúdio Aurora" value={name} onChange={event => setName(event.target.value)} /></div><Button disabled={create.isPending || !name.trim()}><Plus size={16} />Criar organização</Button></form>
     <ErrorNotice error={create.error} />
-    {selected && <Workspace key={selected} id={selected} userId={userId} onLostAccess={() => { setSelected(''); void client.invalidateQueries({ queryKey: ['organizations', userId] }) }} />}
+    {selected && <Workspace key={selected} id={selected} userId={userId} onLostAccess={() => { setSelected(''); navigateCatalog('/', ''); void client.invalidateQueries({ queryKey: ['organizations', userId] }) }} />}
   </section>
 }

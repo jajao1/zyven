@@ -3,10 +3,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { afterEach, expect, it, vi } from 'vitest'
 import App from './App'
 
+vi.mock('./Catalog', () => ({ Catalog: () => null }))
 const user = { id: 'u1', displayName: 'Ana', email: 'ana@example.com' }
 const first = { id: 'a', name: 'Studio A', role: 'OWNER', createdAt: '', updatedAt: '' }
 const second = { ...first, id: 'b', name: 'Studio B', role: 'SUPPORT' }
-afterEach(() => { cleanup(); vi.unstubAllGlobals() })
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); window.history.replaceState(null, '', '/') })
 function open(list = [first, second]) {
   const fetch = vi.fn(async (path: string, init?: RequestInit) => {
     if (path.startsWith('/api/organizations?') || path === '/api/organizations') return new Response(JSON.stringify(init?.method === 'POST' ? { ...first, id: 'c', name: 'Novo espaço' } : { items: list, total: list.length, page: 1, pageSize: 20 }))
