@@ -47,8 +47,8 @@ public sealed class CheckoutInputValidator : AbstractValidator<CheckoutInput>
     public CheckoutInputValidator()
     {
         RuleFor(x => x.Name).NotEmpty().Must(x => x is not null && x.Trim().Length >= 2).MaximumLength(200);
-        RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(254);
-        RuleFor(x => x.Phone).MaximumLength(30).Matches(@"\A[+0-9 ()-]*\z");
+        RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(254).Must(CustomerIdentity.ValidEmail);
+        RuleFor(x => x.Phone).MaximumLength(30).Must(CustomerIdentity.ValidPhone);
         RuleFor(x => x.Document).MaximumLength(40).Matches(@"\A[a-zA-Z0-9 ./-]*\z");
         RuleFor(x => x.Fields).Must(x => x is null || (x.Count <= 10 && x.All(v => v.Key.Length <= 40 && v.Value is not null && v.Value.Length <= 1000)));
     }

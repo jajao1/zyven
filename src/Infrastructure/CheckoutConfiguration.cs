@@ -17,6 +17,7 @@ public sealed class CheckoutConfiguration : IEntityTypeConfiguration<CheckoutSes
 {
     public void Configure(EntityTypeBuilder<CheckoutSession> b)
     {
+        b.HasOne<Customer>().WithMany().HasForeignKey(x => new { x.CustomerId, x.OrganizationId }).HasPrincipalKey(x => new { x.Id, x.OrganizationId }).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<Offer>().WithMany().HasForeignKey(x => new { x.OfferId, x.OrganizationId }).HasPrincipalKey(x => new { x.Id, x.OrganizationId }).OnDelete(DeleteBehavior.Restrict);
         b.Property(x => x.AccessHash).HasMaxLength(64); b.Property(x => x.Status).HasMaxLength(20);
         b.Property(x => x.Name).HasMaxLength(200); b.Property(x => x.Email).HasMaxLength(254);

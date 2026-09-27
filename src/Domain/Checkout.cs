@@ -9,6 +9,7 @@ public sealed class OfferPage
 }
 public sealed class CheckoutSession
 {
+    public Guid CustomerId { get; set; }
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid OrganizationId { get; set; }
     public Guid OfferId { get; set; }

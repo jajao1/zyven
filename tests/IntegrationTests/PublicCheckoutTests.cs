@@ -24,7 +24,7 @@ public class PublicCheckoutTests
         for (var i = 0; i < 60; i++) Assert.Equal(HttpStatusCode.NotFound, (await client.PostAsJsonAsync("/api/public/offers/missing/checkouts", Buyer)).StatusCode);
         var limited = await client.PostAsJsonAsync("/api/public/offers/missing/checkouts", Buyer); Assert.Equal(HttpStatusCode.TooManyRequests, limited.StatusCode); Assert.Equal("900", limited.Headers.GetValues("Retry-After").Single());
     }
-    private static async Task<(HttpClient Client, Guid Org, Guid Offer, string Slug)> Fixture(WebApplicationFactory<Program> app)
+    internal static async Task<(HttpClient Client, Guid Org, Guid Offer, string Slug)> Fixture(WebApplicationFactory<Program> app)
     {
         var client = app.CreateClient(new() { HandleCookies = false }); client.DefaultRequestHeaders.Add("X-Zyven-Client", "web");
         var auth = await client.PostAsJsonAsync("/api/auth/register", new { email = $"public-{Guid.NewGuid():N}@example.test", password = "secure long passphrase", displayName = "Seller" }); auth.EnsureSuccessStatusCode();

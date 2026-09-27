@@ -4,6 +4,7 @@ namespace Zyven.Infrastructure;
 
 public sealed class ZyvenDbContext(DbContextOptions<ZyvenDbContext> options) : DbContext(options)
 {
+    public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<OfferPage> OfferPages => Set<OfferPage>();
     public DbSet<CheckoutSession> Checkouts => Set<CheckoutSession>();
     public DbSet<Product> Products => Set<Product>();
@@ -17,6 +18,7 @@ public sealed class ZyvenDbContext(DbContextOptions<ZyvenDbContext> options) : D
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     protected override void OnModelCreating(ModelBuilder b)
     {
+        b.ApplyConfiguration(new CustomerConfiguration());
         b.ApplyConfiguration(new OfferPageConfiguration());
         b.ApplyConfiguration(new CheckoutConfiguration());
         b.ApplyConfiguration(new ProductConfiguration());
