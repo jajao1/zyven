@@ -24,7 +24,7 @@ public sealed class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         // Migration also adds FK_Payments_CheckoutSnapshot across checkout/customer/offer/org.
         // Keeping that key database-only allows EF to update CustomerId before payment creation.
         b.Property(x => x.GrossAmount).HasPrecision(18, 2); b.Property(x => x.DiscountAmount).HasPrecision(18, 2);
-        b.Property(x => x.OrderBumpAmount).HasPrecision(18, 2); b.Property(x => x.PlatformFee).HasPrecision(18, 2); b.Property(x => x.NetAmount).HasPrecision(18, 2);
+        b.Property(x => x.OrderBumpAmount).HasPrecision(18, 2); b.Property(x => x.PlatformFee).HasPrecision(18, 2); b.Property(x => x.ProviderFee).HasPrecision(18, 2); b.Property(x => x.NetAmount).HasPrecision(18, 2);
         b.Property(x => x.Currency).HasMaxLength(3); b.Property(x => x.PaymentMethod).HasMaxLength(10); b.Property(x => x.Status).HasMaxLength(20);
         b.Property(x => x.Provider).HasMaxLength(100); b.Property(x => x.ProviderTransactionId).HasMaxLength(200); b.Property(x => x.ExternalReference).HasMaxLength(100); b.Property(x => x.EndToEndId).HasMaxLength(200);
         b.HasIndex(x => new { x.MerchantAccountId, x.ExternalReference }).IsUnique();
@@ -34,7 +34,7 @@ public sealed class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         {
             t.HasCheckConstraint("CK_Payments_Status", "\"Status\" IN ('PENDING','PROCESSING','PAID','EXPIRED','FAILED','CANCELLED','REFUNDED','CHARGEBACK')");
             t.HasCheckConstraint("CK_Payments_Method", "\"PaymentMethod\" IN ('PIX','CARD')");
-            t.HasCheckConstraint("CK_Payments_Amounts", "\"GrossAmount\" > 0 AND \"DiscountAmount\" >= 0 AND \"OrderBumpAmount\" >= 0 AND \"PlatformFee\" >= 0 AND \"NetAmount\" >= 0 AND \"NetAmount\" = \"GrossAmount\" - \"PlatformFee\"");
+            t.HasCheckConstraint("CK_Payments_Amounts", "\"GrossAmount\" > 0 AND \"DiscountAmount\" >= 0 AND \"OrderBumpAmount\" >= 0 AND \"PlatformFee\" >= 0 AND \"ProviderFee\" >= 0 AND \"NetAmount\" >= 0 AND \"NetAmount\" = \"GrossAmount\" - \"PlatformFee\" - \"ProviderFee\"");
             t.HasCheckConstraint("CK_Payments_Currency", "\"Currency\" ~ '^[A-Z]{3}$'");
             t.HasCheckConstraint("CK_Payments_ProviderReference", "(\"ProviderTransactionId\" IS NULL OR (length(btrim(\"ProviderTransactionId\")) > 0 AND \"Provider\" IS NOT NULL AND length(btrim(\"Provider\")) > 0)) AND length(btrim(\"ExternalReference\")) > 0");
             t.HasCheckConstraint("CK_Payments_Expiry", "\"ExpiresAt\" > \"CreatedAt\"");

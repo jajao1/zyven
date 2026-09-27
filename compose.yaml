@@ -10,6 +10,8 @@ x-app-environment: &app-environment
   ASPNETCORE_ENVIRONMENT: Development
   DOTNET_ENVIRONMENT: Development
   ReverseProxy__KnownProxies__0: ${DOCKER_PROXY_IP:-172.30.0.10}
+  Payments__Fees__PlatformFixedFee: ${ZYVEN_PLATFORM_FEE:-0.50}
+  Payments__Fees__ProviderFixedFee: ${SYNCPAY_TRANSACTION_FEE:-0.80}
 
 services:
   postgres:

@@ -6,13 +6,14 @@ public sealed record PaymentAmounts
     public decimal DiscountAmount { get; }
     public decimal OrderBumpAmount { get; }
     public decimal PlatformFee { get; }
-    public decimal NetAmount => GrossAmount - PlatformFee;
+    public decimal ProviderFee { get; }
+    public decimal NetAmount => GrossAmount - PlatformFee - ProviderFee;
     private static void Check(decimal value, string name) { if (!PaymentMoney.IsValid(value)) throw new ArgumentOutOfRangeException(name); }
-    public PaymentAmounts(decimal grossAmount, decimal discountAmount, decimal orderBumpAmount, decimal platformFee)
+    public PaymentAmounts(decimal grossAmount, decimal discountAmount, decimal orderBumpAmount, decimal platformFee, decimal providerFee = 0m)
     {
-        Check(grossAmount, nameof(grossAmount)); Check(discountAmount, nameof(discountAmount)); Check(orderBumpAmount, nameof(orderBumpAmount)); Check(platformFee, nameof(platformFee));
-        if (grossAmount == 0 || platformFee > grossAmount) throw new ArgumentOutOfRangeException(nameof(grossAmount));
-        GrossAmount = grossAmount; DiscountAmount = discountAmount; OrderBumpAmount = orderBumpAmount; PlatformFee = platformFee;
+        Check(grossAmount, nameof(grossAmount)); Check(discountAmount, nameof(discountAmount)); Check(orderBumpAmount, nameof(orderBumpAmount)); Check(platformFee, nameof(platformFee)); Check(providerFee, nameof(providerFee));
+        if (grossAmount == 0 || platformFee + providerFee > grossAmount) throw new ArgumentOutOfRangeException(nameof(grossAmount));
+        GrossAmount = grossAmount; DiscountAmount = discountAmount; OrderBumpAmount = orderBumpAmount; PlatformFee = platformFee; ProviderFee = providerFee;
     }
 }
 internal static class PaymentMoney
@@ -40,6 +41,7 @@ public sealed class Payment
     public decimal DiscountAmount { get; private set; }
     public decimal OrderBumpAmount { get; private set; }
     public decimal PlatformFee { get; private set; }
+    public decimal ProviderFee { get; private set; }
     public decimal NetAmount { get; private set; }
     public string Currency { get; private set; } = "";
     public string PaymentMethod { get; private set; } = "PIX";
@@ -55,11 +57,11 @@ public sealed class Payment
     public DateTimeOffset? PaidAt { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
-    public static Payment Prepare(CheckoutSession checkout, MerchantAccount merchant, decimal platformFee, DateTimeOffset now)
+    public static Payment Prepare(CheckoutSession checkout, MerchantAccount merchant, decimal platformFee, DateTimeOffset now, decimal providerFee = 0m)
     {
         if (merchant.Status != "ACTIVE" || merchant.OrganizationId != checkout.OrganizationId) throw new InvalidOperationException("An active merchant in the checkout organization is required.");
         if (checkout.Id == Guid.Empty || checkout.OrganizationId == Guid.Empty || checkout.CustomerId == Guid.Empty || checkout.OfferId == Guid.Empty || merchant.Id == Guid.Empty || checkout.Status != "CREATED" || checkout.ExpiresAt <= now || checkout.Currency is not { Length: 3 } || checkout.Currency.Any(c => c is < 'A' or > 'Z')) throw new InvalidOperationException("A valid, unexpired checkout snapshot is required.");
-        var amounts = new PaymentAmounts(checkout.Price, 0m, 0m, platformFee);
+        var amounts = new PaymentAmounts(checkout.Price, 0m, 0m, platformFee, providerFee);
         return new Payment
         {
             OrganizationId = checkout.OrganizationId,
@@ -71,6 +73,7 @@ public sealed class Payment
             DiscountAmount = amounts.DiscountAmount,
             OrderBumpAmount = amounts.OrderBumpAmount,
             PlatformFee = amounts.PlatformFee,
+            ProviderFee = amounts.ProviderFee,
             NetAmount = amounts.NetAmount,
             Currency = checkout.Currency,
             ExpiresAt = checkout.ExpiresAt,

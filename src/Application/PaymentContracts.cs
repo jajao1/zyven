@@ -17,7 +17,7 @@ public sealed class PaymentChargeRequest
     {
         PaymentId = payment.Id; OrganizationId = payment.OrganizationId; MerchantAccountId = payment.MerchantAccountId;
         IdempotencyReference = payment.ExternalReference; Currency = payment.Currency; ExpiresAt = payment.ExpiresAt;
-        Amounts = new PaymentAmounts(payment.GrossAmount, payment.DiscountAmount, payment.OrderBumpAmount, payment.PlatformFee);
+        Amounts = new PaymentAmounts(payment.GrossAmount, payment.DiscountAmount, payment.OrderBumpAmount, payment.PlatformFee, payment.ProviderFee);
     }
 }
 public sealed record CardChargeRequest(PaymentChargeRequest Charge, string TokenReference);

@@ -22,9 +22,10 @@ public class PaymentFoundationTests
     [Fact]
     public void Amounts_preserve_exact_decimal_and_compute_net()
     {
-        var amounts = new PaymentAmounts(123.45m, 3m, 5m, 1.23m);
-        Assert.Equal(122.22m, amounts.NetAmount);
+        var amounts = new PaymentAmounts(123.45m, 3m, 5m, 1.23m, 0.80m);
+        Assert.Equal(121.42m, amounts.NetAmount);
         Assert.Equal(123.45m, amounts.GrossAmount);
+        Assert.Equal(0.80m, amounts.ProviderFee);
     }
 
     [Fact]
@@ -39,6 +40,7 @@ public class PaymentFoundationTests
         }
         Assert.Throws<ArgumentOutOfRangeException>(() => new PaymentAmounts(0, 0, 0, 0));
         Assert.Throws<ArgumentOutOfRangeException>(() => new PaymentAmounts(10, 0, 0, 11));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new PaymentAmounts(10, 0, 0, 0, 11));
         Assert.Equal(0m, new PaymentAmounts(10, 0, 0, 10).NetAmount);
     }
 
