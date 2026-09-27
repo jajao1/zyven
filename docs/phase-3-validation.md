@@ -9,6 +9,6 @@ Concluída em 27/09/2026. Commits de implementação: 7f13446, a488d2d e 7571c19
 - Navegador: operador criou produto e oferta de 49.90, recarregou a rota, editou para 59.90 e ativou oferta; persistência e navegação reais conferidas. Formulário móvel 390×844, sem overflow horizontal (conteúdo 375px).
 - Integrações exercitam limite numeric(18,2), FK composta diretamente no PostgreSQL, auditoria, papéis e rebaixamento concorrente versus escrita.
 
-O teste local inicial encontrou um 401 transitório; logs do container mostraram relógio recuando de 18:18:34 para 18:18:19 durante o cenário. A validação temporal do JWT permaneceu restrita, sem afrouxamento. Duas execuções posteriores do smoke passaram, incluindo logout das duas contas. O script preserva o erro original caso a limpeza das sessões também falhe.
+O teste local inicial encontrou um 401 transitório; logs do container apresentaram timestamps não monotônicos (18:18:34 seguidos de 18:18:19), compatíveis com ajuste de relógio durante o cenário. A causa não foi confirmada e o problema não se reproduziu nas duas execuções seguintes, que passaram incluindo logout das duas contas. A validação temporal do JWT permaneceu restrita, sem afrouxamento. O script preserva o erro original caso a limpeza das sessões também falhe.
 
 Pagamentos, vendas e receita não foram simulados. Ofertas em ACTIVE ainda dependem da página/checkout e das próximas fases para venda completa.
