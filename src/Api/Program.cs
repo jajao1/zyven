@@ -1,3 +1,4 @@
+using Zyven.Api;
 using System.Net;
 using Microsoft.AspNetCore.HttpOverrides;
 using System.Security.Claims;
@@ -31,6 +32,7 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis") ?? throw new InvalidOperationException("ConnectionStrings:Redis is required.")));
 builder.Services.Configure<PasswordHasherOptions>(o => o.IterationCount = 210000);
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+builder.Services.AddScoped<TenantAuthorization>(); builder.Services.AddScoped<OrganizationService>();
 builder.Services.AddScoped<AuthService>(); builder.Services.AddSingleton<AuthRateGate>();
 builder.Services.AddSingleton<RegisterValidator>(); builder.Services.AddSingleton<LoginValidator>();
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
@@ -138,6 +140,7 @@ app.MapGet("/api/auth/me", async (HttpContext context, ZyvenDbContext db, Cancel
     var id = Guid.Parse(context.User.FindFirstValue("sub")!);
     return await db.Users.Where(x => x.Id == id).Select(x => new UserResponse(x.Id, x.Email, x.DisplayName)).SingleAsync(ct);
 }).RequireAuthorization();
+app.MapOrganizations();
 await app.RunAsync();
 static CookieOptions CookieOptions(bool development) => new() { HttpOnly = true, Secure = !development, SameSite = SameSiteMode.Strict, Path = "/api/auth", IsEssential = true };
 static void SetCookie(HttpContext context, AuthGrant grant, bool development) { var options = CookieOptions(development); options.Expires = grant.ExpiresAt; context.Response.Cookies.Append("zyven_refresh", grant.RefreshToken, options); }
