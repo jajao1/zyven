@@ -3,6 +3,16 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { PublicOfferPage } from './PublicOfferPage'
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); window.history.replaceState(null, '', '/') })
+it('requires an explicit country code instead of guessing from a local phone', async () => {
+  const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ slug: 'course', name: 'Course', productName: 'Course', price: '19.90', currency: 'BRL', billingType: 'ONE_TIME', page: { title: 'Course', subtitle: '', description: '', benefits: [], testimonials: [], faq: [], guarantee: '', cta: 'Continuar', color: '#002fa7', fields: [] } })))
+  vi.stubGlobal('fetch', fetcher)
+  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><PublicOfferPage slug="course" /></QueryClientProvider>)
+  await screen.findByRole('heading', { name: 'Seus dados' })
+  fireEvent.change(screen.getByLabelText('Nome completo'), { target: { value: 'Buyer Name' } }); fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'buyer@example.test' } }); fireEvent.change(screen.getByLabelText('Telefone (opcional)'), { target: { value: '11999990000' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Continuar' }))
+  expect(await screen.findByText('Informe o telefone com + e código do país.')).toBeInTheDocument()
+  expect(fetcher).toHaveBeenCalledTimes(1)
+})
 it('renders escaped content and submits buyer data without client price', async () => {
   const fetcher = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({ slug: 'course', name: 'Course', productName: 'Course', price: '19.90', currency: 'BRL', billingType: 'ONE_TIME', page: { title: '<script>bad()</script>', subtitle: '', description: 'Lessons', benefits: [], testimonials: [], faq: [], guarantee: '', cta: 'Continuar', color: '#002fa7', fields: [{ key: 'company', label: 'Empresa', type: 'text', required: true }] } }))).mockResolvedValueOnce(new Response(JSON.stringify({ id: 'checkout-id', status: 'CREATED', price: '19.90', currency: 'BRL', expiresAt: '2099-01-01T00:00:00Z', name: 'Buyer', email: 'buyer@example.test', fields: {} }), { status: 201 }))
   vi.stubGlobal('fetch', fetcher)
