@@ -11,3 +11,5 @@ Concluída em 27/09/2026. Implementação: ff522ea; validação de telefone na i
 - `smoke-checkout.ps1` passou novamente após a integração com clientes. Página pública conferida no navegador com instrução de telefone internacional e aviso de pagamento indisponível.
 
 A consulta administrativa de clientes está implementada. A interface completa e a timeline continuam na fase 14. Identificação por contato não representa autenticação do comprador.
+
+CI Linux aprovada sobre 0137f01: https://github.com/jajao1/zyven/actions/runs/36342010709 (backend e frontend).
