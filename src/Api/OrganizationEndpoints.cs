@@ -35,4 +35,3 @@ public static class OrganizationEndpoints
         catch (OrganizationException error) { return Results.Problem(statusCode: error.Status, title: error.Message); }
     }
 }
-

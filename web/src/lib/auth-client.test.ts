@@ -59,3 +59,30 @@ describe('auth client', () => {
     expect(authClient.token()).toBeNull()
   })
 })
+
+it('retries concurrent organization requests once using a single refreshed credential', async () => {
+  const module = await import('./auth-client')
+  expect(module).toHaveProperty('authorizedRequest')
+  let refreshes = 0
+  vi.stubGlobal('fetch', vi.fn(async (path, init) => {
+    if (path === '/api/auth/refresh') { refreshes++; return ok() }
+    return init.headers.Authorization === 'Bearer access-secret'
+      ? new Response(JSON.stringify({ name: 'Studio' })) : new Response(null, { status: 401 })
+  }))
+  authClient.clear()
+  const result = await Promise.all([module.authorizedRequest('/api/organizations/a'), module.authorizedRequest('/api/organizations/b')])
+  expect(refreshes).toBe(1)
+  expect(result).toEqual([{ name: 'Studio' }, { name: 'Studio' }])
+})
+
+it('does not refresh permission failures or retry more than once', async () => {
+  const module = await import('./auth-client')
+  expect(module).toHaveProperty('authorizedRequest')
+  const fetch = vi.fn(async (path) => path === '/api/auth/refresh' ? ok() : new Response(null, { status: 401 }))
+  vi.stubGlobal('fetch', fetch)
+  await expect(module.authorizedRequest('/api/organizations/a')).rejects.toMatchObject({ status: 401 })
+  expect(fetch).toHaveBeenCalledTimes(3)
+  fetch.mockClear().mockResolvedValue(new Response(null, { status: 403 }))
+  await expect(module.authorizedRequest('/api/organizations/a')).rejects.toMatchObject({ status: 403 })
+  expect(fetch).toHaveBeenCalledTimes(1)
+})

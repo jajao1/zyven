@@ -83,3 +83,24 @@ export const authClient = {
     accessToken = null
   },
 }
+
+export async function authorizedRequest<T>(path: string, body?: unknown, method = 'GET'): Promise<T> {
+  const usedToken = accessToken
+  const send = () => fetch(path, {
+    method, credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json', 'X-Zyven-Client': 'web', ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  })
+  let response = await send()
+  if (response.status === 401) {
+    // A slower 401 may arrive after another request has already rotated the token.
+    if (accessToken === usedToken) await authClient.refresh()
+    response = await send()
+  }
+  if (!response.ok) {
+    let title: string | undefined
+    try { title = (await response.json() as { title?: string }).title } catch { /* empty response */ }
+    throw new ApiError(response.status, title ?? (response.status === 401 ? 'Sua sessão expirou. Entre novamente.' : 'Não foi possível concluir. Tente novamente.'))
+  }
+  return response.status === 204 ? undefined as T : response.json() as Promise<T>
+}
