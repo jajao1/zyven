@@ -12,6 +12,7 @@ Validação em 27/09/2026 após revisão de especificação e revisão de qualid
 - `scripts/smoke.ps1`: cadastro, perfil, refresh, logout, revogação de access/refresh e novo login aprovados pelo proxy.
 - Navegador: cadastro, recarregamento mantendo sessão, logout e login; layout de 390×844 inspecionado.
 - Auditoria NuGet transitiva e npm sem vulnerabilidades reportadas no momento da execução.
+- GitHub Actions no commit `98e2efa`: backend e frontend aprovados em Linux; execução [36338540443](https://github.com/jajao1/zyven/actions/runs/36338540443).
 
 O teste determinístico de concorrência reproduziu HTTP 500 quando a limpeza apagava uma sessão enquanto o refresh aguardava seu bloqueio. A correção retorna 401 nesse caso; o teste passou no banco real. Replay de refresh, logout concorrente, expiração absoluta, duplicação de e-mail e senha incorreta também estão cobertos.
 
