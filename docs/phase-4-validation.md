@@ -13,3 +13,5 @@ Concluída em 27/09/2026. Implementação: 4ff85a7, e707c05, 57b6cae; ajuste de 
 O smoke inicial reutilizou a sessão HTTP da origem inválida, mantendo esse cabeçalho em requests seguintes; o script foi corrigido para usar sessões independentes. O teste completo posterior passou. Nenhum dado do comprador é acessível apenas pelo ID na URL.
 
 Não há pagamento simulado nem confirmação de venda nesta fase. CustomerId será associado na fase 5 preservando checkouts existentes.
+
+CI Linux aprovada sobre a34d0c9: https://github.com/jajao1/zyven/actions/runs/36341336272 (backend e frontend).
