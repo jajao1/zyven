@@ -37,7 +37,7 @@ O Compose é um ambiente de **Development**. Em produção, configurar TLS no pr
 
 `src/Domain` contém entidades; `src/Application`, contratos e validação; `src/Infrastructure`, persistência e serviços; `src/Api`, HTTP; `src/Workers`, processamento Hangfire. `web` usa React, TypeScript, Vite, Tailwind, componentes shadcn/ui, TanStack Query, React Hook Form e Zod. Recharts está disponível para a fase de dashboard.
 
-O núcleo comercial segue **Product → Offer → Checkout → Payment → Entitlement → Fulfillment**. Organizações e isolamento estão implementados; veja [`docs/organizations.md`](docs/organizations.md) para endpoints e permissões. Nenhum identificador de organização enviado pelo cliente deve conferir acesso por si só. Pagamentos, ledger, saldo, saques e integrações não são implementados nesta base.
+O núcleo comercial segue **Product → Offer → Checkout → Payment → Entitlement → Fulfillment**. Organizações e isolamento estão implementados; veja [`docs/organizations.md`](docs/organizations.md) para endpoints e permissões. Nenhum identificador de organização enviado pelo cliente deve conferir acesso por si só. Cobranças reais, ledger, saldo, saques e entregas permanecem pendentes.
 
 ## Autenticação
 
@@ -95,3 +95,5 @@ Catálogo e smoke específico: [docs/catalog.md](docs/catalog.md). Estado e depe
 Página pública e checkout: [docs/public-checkout.md](docs/public-checkout.md). A etapa de pagamento ainda não está disponível; criar checkout não confirma compra nem produz cobrança.
 
 Clientes, normalização e proteção de perfil: [docs/customers.md](docs/customers.md). `./scripts/smoke-customers.ps1` verifica deduplicação, isolamento e privacidade no ambiente local.
+
+A preparação da fase 6 inclui MerchantAccount pendente, entidades e contratos de pagamento e restrições financeiras/tenant no banco. O processador registrado retorna indisponível; nenhum pagamento é criado pelo checkout. A fase 6 **não está concluída**: falta definir o PSP/banco, integrar sua API e validar a cobrança real em sandbox. Escopo e dependências: [docs/payment-foundation.md](docs/payment-foundation.md). Smoke local dessa preparação: `./scripts/smoke-payment-foundation.ps1`.

@@ -9,7 +9,7 @@ A especificação mestre permanece a autoridade. Este mapa registra a sequência
 | 3 | Produtos e ofertas | Validada e enviada |
 | 4 | Editor simples, página pública e checkout persistente | Validada e enviada |
 | 5 | Clientes e identificação por organização | Validada e enviada |
-| 6 | Payment core, MerchantAccount e abstração PIX | Depende da infraestrutura financeira definida |
+| 6 | Payment core, MerchantAccount e abstração PIX | Preparação parcial; integração real depende do PSP/banco |
 | 7 | Webhook assinado, confirmação e idempotência | Pendente |
 | 8 | Ledger imutável, wallet e regras de taxas | Pendente |
 | 9 | Fulfillment e entitlements | Pendente |
