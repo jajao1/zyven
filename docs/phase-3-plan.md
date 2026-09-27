@@ -19,3 +19,5 @@ CRUD sem exclusão física (arquivamento via status) em `/api/organizations/{org
 - [ ] Testes de preço, precisão, slug duplicado e campos inválidos; comprovar persistência no PostgreSQL real.
 - [ ] Migration com índices de organização, slug e CreatedAt; gate completo de build/testes/lint/modelo/smoke/revisão.
 - [ ] Documentar evidências e criar commits antes da fase 4.
+
+As páginas de catálogo devem ter navegação real em /products, /products/new, /products/:id e /offers, /offers/new, /offers/:id, respeitando contexto de organização e identidade no cache. Auditoria registra criação/alteração de ofertas e preços. Métricas de vendas/receita e abas dependentes de fases futuras não devem apresentar dados fictícios.
