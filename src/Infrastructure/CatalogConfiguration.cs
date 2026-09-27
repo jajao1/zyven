@@ -21,6 +21,7 @@ public sealed class OfferConfiguration : IEntityTypeConfiguration<Offer>
 {
     public void Configure(EntityTypeBuilder<Offer> b)
     {
+        b.HasAlternateKey(x => new { x.Id, x.OrganizationId });
         b.HasOne<Product>().WithMany().HasForeignKey(x => new { x.ProductId, x.OrganizationId }).HasPrincipalKey(x => new { x.Id, x.OrganizationId }).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<Organization>().WithMany().HasForeignKey(x => x.OrganizationId).OnDelete(DeleteBehavior.Restrict);
         b.HasIndex(x => x.Slug).IsUnique();

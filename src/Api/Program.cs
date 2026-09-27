@@ -33,6 +33,7 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer
 builder.Services.Configure<PasswordHasherOptions>(o => o.IterationCount = 210000);
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<CatalogService>();
+builder.Services.AddScoped<PublicCheckoutService>();
 builder.Services.AddScoped<TenantAuthorization>(); builder.Services.AddScoped<OrganizationService>();
 builder.Services.AddScoped<AuthService>(); builder.Services.AddSingleton<AuthRateGate>();
 builder.Services.AddSingleton<RegisterValidator>(); builder.Services.AddSingleton<LoginValidator>();
@@ -63,6 +64,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     // An empty list trusts every proxy, so keep a non-routable sentinel when proxying is disabled.
     if (proxies.Length == 0) options.KnownProxies.Add(IPAddress.None);
 });
+builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 131072);
 builder.Services.AddAuthorization(); builder.Services.AddProblemDetails(); builder.Services.AddOpenApi();
 var app = builder.Build();
 app.UseExceptionHandler();
@@ -92,6 +94,17 @@ if (!app.Environment.IsDevelopment()) app.UseHsts();
 app.UseCors();
 app.Use(async (context, next) =>
 {
+    if (context.Request.Path.StartsWithSegments("/api/public"))
+    {
+        if (!HttpMethods.IsGet(context.Request.Method) && !HttpMethods.IsHead(context.Request.Method))
+        {
+            var origin = context.Request.Headers.Origin.ToString();
+            if (context.Request.Headers["X-Zyven-Client"] != "web" || (origin.Length > 0 && !origins.Contains(origin, StringComparer.OrdinalIgnoreCase))) { context.Response.StatusCode = 403; return; }
+        }
+        var gate = context.RequestServices.GetRequiredService<AuthRateGate>();
+        var limit = HttpMethods.IsGet(context.Request.Method) ? 300 : 60;
+        if (!await gate.Allow(HttpMethods.IsGet(context.Request.Method) ? "public-read" : "public-write", context.Connection.RemoteIpAddress?.ToString() ?? "unknown", limit)) { context.Response.StatusCode = 429; context.Response.Headers.RetryAfter = "900"; return; }
+    }
     if (HttpMethods.IsPost(context.Request.Method) && context.Request.Path.StartsWithSegments("/api/auth"))
     {
         var origin = context.Request.Headers.Origin.ToString();
@@ -143,6 +156,7 @@ app.MapGet("/api/auth/me", async (HttpContext context, ZyvenDbContext db, Cancel
 }).RequireAuthorization();
 app.MapOrganizations();
 app.MapCatalog();
+app.MapPublicCheckout();
 await app.RunAsync();
 static CookieOptions CookieOptions(bool development) => new() { HttpOnly = true, Secure = !development, SameSite = SameSiteMode.Strict, Path = "/api/auth", IsEssential = true };
 static void SetCookie(HttpContext context, AuthGrant grant, bool development) { var options = CookieOptions(development); options.Expires = grant.ExpiresAt; context.Response.Cookies.Append("zyven_refresh", grant.RefreshToken, options); }
