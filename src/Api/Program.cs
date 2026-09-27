@@ -143,6 +143,3 @@ static CookieOptions CookieOptions(bool development) => new() { HttpOnly = true,
 static void SetCookie(HttpContext context, AuthGrant grant, bool development) { var options = CookieOptions(development); options.Expires = grant.ExpiresAt; context.Response.Cookies.Append("zyven_refresh", grant.RefreshToken, options); }
 static void ClearCookie(HttpContext context, bool development) => context.Response.Cookies.Delete("zyven_refresh", CookieOptions(development));
 public partial class Program { }
-
-
-

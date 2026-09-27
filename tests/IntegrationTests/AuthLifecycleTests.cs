@@ -53,4 +53,3 @@ public class AuthLifecycleTests
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsJsonAsync("/api/auth/login", new { email = "missing@example.com", password = "invalid password" })).StatusCode);
     }
 }
-

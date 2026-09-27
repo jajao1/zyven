@@ -20,5 +20,3 @@ public sealed class ZyvenDbContext(DbContextOptions<ZyvenDbContext> options) : D
         b.Entity<RefreshToken>().HasOne(x => x.Session).WithMany().HasForeignKey(x => x.SessionId).OnDelete(DeleteBehavior.Cascade);
     }
 }
-
-

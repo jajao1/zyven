@@ -157,9 +157,3 @@ public class AuthSecurityTests
         Assert.NotEqual("secure testing password 123", (await db.Users.SingleAsync(x => x.Id == auth.User.Id)).PasswordHash);
     }
 }
-
-
-
-
-
-

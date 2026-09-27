@@ -17,4 +17,3 @@ using (var scope = host.Services.CreateScope())
     scope.ServiceProvider.GetRequiredService<IRecurringJobManager>().AddOrUpdate<SessionCleanup>("expired-auth-sessions", x => x.Run(CancellationToken.None), Cron.Hourly());
 }
 await host.RunAsync();
-

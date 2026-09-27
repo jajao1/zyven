@@ -82,5 +82,3 @@ public sealed class AuthService(ZyvenDbContext db, IPasswordHasher<User> passwor
         return new(new(new JwtSecurityTokenHandler().WriteToken(jwt), new(user.Id, user.Email, user.DisplayName)), refresh, session.ExpiresAt);
     }
 }
-
-
