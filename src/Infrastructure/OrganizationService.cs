@@ -63,10 +63,10 @@ public sealed class OrganizationService(ZyvenDbContext db, TenantAuthorization t
         if (actor.Role is not (OrganizationRoles.Owner or OrganizationRoles.Admin)) throw Forbidden();
         var merchant = await db.MerchantAccounts.SingleAsync(x => x.OrganizationId == id, ct);
         try { merchant.Activate(request.ProviderRecipientId ?? "", time.GetUtcNow()); }
-        catch (ArgumentException) { throw new OrganizationException(400, "Informe o identificador de recebedor da SyncPay."); }
+        catch (ArgumentException) { throw new OrganizationException(400, "Informe o número da conta BaaS Celcoin do recebedor."); }
         Audit(id, userId, merchant.Id, "payment_account.connected");
         try { await db.SaveChangesAsync(ct); }
-        catch (DbUpdateException) { throw new OrganizationException(409, "Esta conta SyncPay já está vinculada a outra organização."); }
+        catch (DbUpdateException) { throw new OrganizationException(409, "Esta conta Celcoin já está vinculada a outra organização."); }
         await transaction.CommitAsync(ct);
         return new(merchant.Status, merchant.ProviderRecipientId);
     }

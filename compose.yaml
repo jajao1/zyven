@@ -11,11 +11,7 @@ x-app-environment: &app-environment
   DOTNET_ENVIRONMENT: Development
   ReverseProxy__KnownProxies__0: ${DOCKER_PROXY_IP:-172.30.0.10}
   Payments__Fees__PlatformFixedFee: ${ZYVEN_PLATFORM_FEE:-0.50}
-  Payments__Fees__ProviderFixedFee: ${SYNCPAY_TRANSACTION_FEE:-0.80}
-  Payments__SyncPay__Enabled: ${SYNCPAY_ENABLED:-false}
-  Payments__SyncPay__ClientId: ${SYNCPAY_CLIENT_ID:-}
-  Payments__SyncPay__ClientSecret: ${SYNCPAY_CLIENT_SECRET:-}
-  Payments__SyncPay__WebhookUrl: ${SYNCPAY_WEBHOOK_URL:-}
+  Payments__Fees__ProviderFixedFee: ${CELCOIN_TRANSACTION_FEE:-0.00}
 
 services:
   postgres:

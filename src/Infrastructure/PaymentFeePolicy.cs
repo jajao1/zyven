@@ -6,7 +6,7 @@ public sealed class PaymentFeeOptions
 {
     public const string SectionName = "Payments:Fees";
     public decimal PlatformFixedFee { get; set; } = 0.50m;
-    public decimal ProviderFixedFee { get; set; } = 0.80m;
+    public decimal ProviderFixedFee { get; set; }
 }
 
 public sealed record PaymentFees(decimal PlatformFee, decimal ProviderFee);

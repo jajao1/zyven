@@ -65,7 +65,7 @@ public class PaymentFoundationTests
     }
 
     [Fact]
-    public void Merchant_activation_requires_a_syncpay_recipient_identifier()
+    public void Merchant_activation_requires_a_provider_recipient_identifier()
     {
         var merchant = new MerchantAccount { OrganizationId = Guid.NewGuid() };
 

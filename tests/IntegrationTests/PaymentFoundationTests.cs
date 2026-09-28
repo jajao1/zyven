@@ -14,7 +14,7 @@ namespace IntegrationTests;
 public class PaymentFoundationTests
 {
     [Fact]
-    public async Task Owner_connects_the_organization_to_a_syncpay_recipient()
+    public async Task Owner_connects_the_organization_to_a_celcoin_baas_account()
     {
         await using var app = new WebApplicationFactory<Program>();
         var fixture = await PublicCheckoutTests.Fixture(app); using var client = fixture.Client;
