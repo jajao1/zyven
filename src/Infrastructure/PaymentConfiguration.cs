@@ -11,6 +11,7 @@ public sealed class MerchantAccountConfiguration : IEntityTypeConfiguration<Merc
         b.HasIndex(x => x.OrganizationId).IsUnique();
         b.Property(x => x.Status).HasMaxLength(20).HasDefaultValue("PENDING");
         b.Property(x => x.ProviderRecipientId).HasMaxLength(200);
+        b.Property(x => x.PixKey).HasMaxLength(200); b.Property(x => x.MerchantName).HasMaxLength(25); b.Property(x => x.MerchantCity).HasMaxLength(15); b.Property(x => x.MerchantPostalCode).HasMaxLength(8);
         b.HasIndex(x => x.ProviderRecipientId).IsUnique().HasFilter("\"ProviderRecipientId\" IS NOT NULL");
         b.ToTable(t => t.HasCheckConstraint("CK_MerchantAccounts_Status", "\"Status\" IN ('PENDING','ACTIVE','SUSPENDED','BLOCKED')"));
     }
@@ -30,6 +31,7 @@ public sealed class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         b.Property(x => x.Currency).HasMaxLength(3); b.Property(x => x.PaymentMethod).HasMaxLength(10); b.Property(x => x.Status).HasMaxLength(20);
         b.Property(x => x.Provider).HasMaxLength(100); b.Property(x => x.ProviderTransactionId).HasMaxLength(200); b.Property(x => x.ExternalReference).HasMaxLength(100); b.Property(x => x.EndToEndId).HasMaxLength(200);
         b.HasIndex(x => new { x.MerchantAccountId, x.ExternalReference }).IsUnique();
+        b.HasIndex(x => x.CheckoutSessionId).IsUnique();
         b.HasIndex(x => new { x.MerchantAccountId, x.Provider, x.ProviderTransactionId }).IsUnique().HasFilter("\"ProviderTransactionId\" IS NOT NULL");
         b.HasIndex(x => new { x.OrganizationId, x.CreatedAt }); b.HasIndex(x => new { x.Status, x.ExpiresAt });
         b.ToTable(t =>
@@ -41,5 +43,15 @@ public sealed class PaymentConfiguration : IEntityTypeConfiguration<Payment>
             t.HasCheckConstraint("CK_Payments_ProviderReference", "(\"ProviderTransactionId\" IS NULL OR (length(btrim(\"ProviderTransactionId\")) > 0 AND \"Provider\" IS NOT NULL AND length(btrim(\"Provider\")) > 0)) AND length(btrim(\"ExternalReference\")) > 0");
             t.HasCheckConstraint("CK_Payments_Expiry", "\"ExpiresAt\" > \"CreatedAt\"");
         });
+    }
+}
+
+public sealed class PaymentWebhookEventConfiguration : IEntityTypeConfiguration<PaymentWebhookEvent>
+{
+    public void Configure(EntityTypeBuilder<PaymentWebhookEvent> b)
+    {
+        b.Property(x => x.Provider).HasMaxLength(30); b.Property(x => x.ExternalEventId).HasMaxLength(200); b.Property(x => x.EventType).HasMaxLength(80); b.Property(x => x.Status).HasMaxLength(20); b.Property(x => x.PayloadHash).HasMaxLength(64);
+        b.HasIndex(x => new { x.Provider, x.ExternalEventId }).IsUnique();
+        b.HasOne<Payment>().WithMany().HasForeignKey(x => x.PaymentId).OnDelete(DeleteBehavior.Restrict);
     }
 }

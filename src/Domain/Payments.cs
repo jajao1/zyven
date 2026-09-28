@@ -26,12 +26,21 @@ public sealed class MerchantAccount
     public Guid OrganizationId { get; set; }
     public string Status { get; set; } = "PENDING";
     public string? ProviderRecipientId { get; private set; }
+    public string? PixKey { get; private set; }
+    public string? MerchantName { get; private set; }
+    public string? MerchantCity { get; private set; }
+    public string? MerchantPostalCode { get; private set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
-    public void Activate(string providerRecipientId, DateTimeOffset now)
+    public void Activate(string providerRecipientId, DateTimeOffset now, string? pixKey = null, string? merchantName = null, string? merchantCity = null, string? merchantPostalCode = null)
     {
         if (string.IsNullOrWhiteSpace(providerRecipientId) || providerRecipientId.Length > 200) throw new ArgumentException("A valid provider recipient identifier is required.", nameof(providerRecipientId));
-        ProviderRecipientId = providerRecipientId.Trim(); Status = "ACTIVE"; UpdatedAt = now;
+        if (pixKey is not null && (string.IsNullOrWhiteSpace(pixKey) || pixKey.Length > 200)) throw new ArgumentException("A valid PIX key is required.", nameof(pixKey));
+        if (merchantName is not null && (string.IsNullOrWhiteSpace(merchantName) || merchantName.Length > 25)) throw new ArgumentException("A valid merchant name is required.", nameof(merchantName));
+        if (merchantCity is not null && (string.IsNullOrWhiteSpace(merchantCity) || merchantCity.Length > 15)) throw new ArgumentException("A valid merchant city is required.", nameof(merchantCity));
+        if (merchantPostalCode is not null && (merchantPostalCode.Length != 8 || merchantPostalCode.Any(c => !char.IsAsciiDigit(c)))) throw new ArgumentException("A valid merchant postal code is required.", nameof(merchantPostalCode));
+        ProviderRecipientId = providerRecipientId.Trim(); PixKey = pixKey?.Trim(); MerchantName = merchantName?.Trim(); MerchantCity = merchantCity?.Trim(); MerchantPostalCode = merchantPostalCode;
+        Status = "ACTIVE"; UpdatedAt = now;
     }
 }
 public sealed class Payment
@@ -87,4 +96,44 @@ public sealed class Payment
             UpdatedAt = now
         };
     }
+    public void BeginProvider(DateTimeOffset now)
+    {
+        if (Status != "PENDING") throw new InvalidOperationException("Only a pending payment can start provider processing.");
+        Status = "PROCESSING"; UpdatedAt = now;
+    }
+    public void AttachPix(string provider, string providerTransactionId, string? transactionIdentification, string pixCode, DateTimeOffset expiresAt, DateTimeOffset now)
+    {
+        if (Status != "PROCESSING" || string.IsNullOrWhiteSpace(provider) || string.IsNullOrWhiteSpace(providerTransactionId) || string.IsNullOrWhiteSpace(pixCode)) throw new InvalidOperationException("A processing payment and complete PIX response are required.");
+        Provider = provider.Trim(); ProviderTransactionId = providerTransactionId.Trim(); QrCodeData = transactionIdentification; PixCode = pixCode; ExpiresAt = expiresAt; Status = "PENDING"; UpdatedAt = now;
+    }
+    public void Fail(DateTimeOffset now)
+    {
+        if (Status is not ("PENDING" or "PROCESSING")) throw new InvalidOperationException("This payment cannot fail from its current state.");
+        Status = "FAILED"; UpdatedAt = now;
+    }
+    public void Expire(DateTimeOffset now)
+    {
+        if (Status is not ("PENDING" or "PROCESSING") || ExpiresAt > now) throw new InvalidOperationException("This payment is not eligible for expiry.");
+        Status = "EXPIRED"; UpdatedAt = now;
+    }
+    public void ConfirmPaid(string endToEndId, decimal amount, DateTimeOffset paidAt)
+    {
+        if (amount != GrossAmount || string.IsNullOrWhiteSpace(endToEndId)) throw new InvalidOperationException("Provider confirmation does not match the payment.");
+        if (Status == "PAID") { if (EndToEndId != endToEndId) throw new InvalidOperationException("A different confirmation already paid this payment."); return; }
+        if (Status is not ("PENDING" or "PROCESSING")) throw new InvalidOperationException("This payment cannot be confirmed from its current state.");
+        EndToEndId = endToEndId.Trim(); PaidAt = paidAt; Status = "PAID"; UpdatedAt = paidAt;
+    }
+}
+
+public sealed class PaymentWebhookEvent
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string Provider { get; set; } = "CELCOIN";
+    public string ExternalEventId { get; set; } = "";
+    public Guid? PaymentId { get; set; }
+    public string EventType { get; set; } = "";
+    public string Status { get; set; } = "RECEIVED";
+    public string PayloadHash { get; set; } = "";
+    public DateTimeOffset ReceivedAt { get; set; }
+    public DateTimeOffset? ProcessedAt { get; set; }
 }

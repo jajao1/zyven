@@ -62,13 +62,13 @@ public sealed class OrganizationService(ZyvenDbContext db, TenantAuthorization t
         var actor = await tenants.RequireMembership(id, userId, ct);
         if (actor.Role is not (OrganizationRoles.Owner or OrganizationRoles.Admin)) throw Forbidden();
         var merchant = await db.MerchantAccounts.SingleAsync(x => x.OrganizationId == id, ct);
-        try { merchant.Activate(request.ProviderRecipientId ?? "", time.GetUtcNow()); }
-        catch (ArgumentException) { throw new OrganizationException(400, "Informe o número da conta BaaS Celcoin do recebedor."); }
+        try { merchant.Activate(request.ProviderRecipientId ?? "", time.GetUtcNow(), request.PixKey ?? "", request.MerchantName ?? "", request.MerchantCity ?? "", request.MerchantPostalCode ?? ""); }
+        catch (ArgumentException) { throw new OrganizationException(400, "Informe conta, chave PIX, nome, cidade e CEP válidos da conta BaaS Celcoin."); }
         Audit(id, userId, merchant.Id, "payment_account.connected");
         try { await db.SaveChangesAsync(ct); }
         catch (DbUpdateException) { throw new OrganizationException(409, "Esta conta Celcoin já está vinculada a outra organização."); }
         await transaction.CommitAsync(ct);
-        return new(merchant.Status, merchant.ProviderRecipientId);
+        return new(merchant.Status, merchant.ProviderRecipientId, merchant.PixKey, merchant.MerchantName, merchant.MerchantCity, merchant.MerchantPostalCode);
     }
 
     public async Task<PageResponse<MemberResponse>> Members(Guid id, Guid userId, int page, int pageSize, CancellationToken ct)

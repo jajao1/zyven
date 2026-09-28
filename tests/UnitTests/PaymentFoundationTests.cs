@@ -77,6 +77,25 @@ public class PaymentFoundationTests
     }
 
     [Fact]
+    public void Payment_applies_provider_and_confirmation_states_safely()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var merchant = new MerchantAccount { OrganizationId = Guid.NewGuid(), Status = "ACTIVE" };
+        var checkout = new CheckoutSession { OrganizationId = merchant.OrganizationId, CustomerId = Guid.NewGuid(), OfferId = Guid.NewGuid(), Price = 19.90m, Currency = "BRL", ExpiresAt = now.AddMinutes(30) };
+        var payment = Payment.Prepare(checkout, merchant, 0.50m, now);
+
+        payment.BeginProvider(now);
+        Assert.Equal("PROCESSING", payment.Status);
+        payment.AttachPix("CELCOIN", "12345", "txid", "emv", now.AddMinutes(30), now);
+        Assert.Equal("PENDING", payment.Status);
+        payment.ConfirmPaid("end-to-end", 19.90m, now.AddMinutes(1));
+        Assert.Equal("PAID", payment.Status);
+        Assert.Equal("end-to-end", payment.EndToEndId);
+        Assert.Throws<InvalidOperationException>(() => payment.Fail(now.AddMinutes(2)));
+        Assert.Throws<InvalidOperationException>(() => payment.ConfirmPaid("other", 18m, now.AddMinutes(2)));
+    }
+
+    [Fact]
     public async Task Unconfigured_processor_returns_typed_unavailable_for_every_operation()
     {
         IPaymentProcessor processor = new UnconfiguredPaymentProcessor();

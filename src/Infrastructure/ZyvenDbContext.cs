@@ -6,6 +6,7 @@ public sealed class ZyvenDbContext(DbContextOptions<ZyvenDbContext> options) : D
 {
     public DbSet<MerchantAccount> MerchantAccounts => Set<MerchantAccount>();
     public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<PaymentWebhookEvent> PaymentWebhookEvents => Set<PaymentWebhookEvent>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<OfferPage> OfferPages => Set<OfferPage>();
     public DbSet<CheckoutSession> Checkouts => Set<CheckoutSession>();
@@ -22,6 +23,7 @@ public sealed class ZyvenDbContext(DbContextOptions<ZyvenDbContext> options) : D
     {
         b.ApplyConfiguration(new MerchantAccountConfiguration());
         b.ApplyConfiguration(new PaymentConfiguration());
+        b.ApplyConfiguration(new PaymentWebhookEventConfiguration());
         b.ApplyConfiguration(new CustomerConfiguration());
         b.ApplyConfiguration(new OfferPageConfiguration());
         b.ApplyConfiguration(new CheckoutConfiguration());

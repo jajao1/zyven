@@ -19,6 +19,8 @@ public static class PublicCheckoutEndpoints
         }));
         app.MapGet("/api/public/checkouts/{id:guid}", (Guid id, HttpContext context, PublicCheckoutService service, CancellationToken ct) => Execute(async () => Results.Ok(await service.Read(id, context.Request.Cookies["zyven_checkout"], ct))));
         app.MapPatch("/api/public/checkouts/{id:guid}", (Guid id, CheckoutInput input, HttpContext context, PublicCheckoutService service, CancellationToken ct) => Execute(async () => Results.Ok(await service.Update(id, context.Request.Cookies["zyven_checkout"], input, ct))));
+        app.MapPost("/api/public/checkouts/{id:guid}/payments/pix", (Guid id, HttpContext context, PixPaymentService service, CancellationToken ct) => Execute(async () => Results.Ok(await service.Create(id, context.Request.Cookies["zyven_checkout"], ct))));
+        app.MapGet("/api/public/checkouts/{id:guid}/payments/pix", (Guid id, HttpContext context, PixPaymentService service, CancellationToken ct) => Execute(async () => Results.Ok(await service.Read(id, context.Request.Cookies["zyven_checkout"], ct))));
     }
     private static async Task<IResult> Execute(Func<Task<IResult>> action)
     {

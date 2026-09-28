@@ -12,7 +12,7 @@ Zyven will integrate with Celcoin BaaS & Core for PIX cash-in by dynamic QR Code
 6. Store provider references without treating the synchronous response as proof of payment.
 7. Receive `pix-payment-in` events through an authenticated webhook and reconcile payment state against the Celcoin account statement or transaction query.
 
-The exact request mapping stays disabled until Celcoin confirms which account originates charges, how each seller account is represented, and which credentials and certificates belong to each environment. This avoids shipping a plausible payload that does not match the contracted BaaS setup.
+The request mapping is implemented with the seller as originator and the configured Zyven account as the fixed split recipient. `CELCOIN_ENABLED=false` remains the safe deployment default until homologation credentials are installed.
 
 ## Operational requirements
 
@@ -30,7 +30,7 @@ The exact request mapping stays disabled until Celcoin confirms which account or
 
 `ZYVEN_PLATFORM_FEE` controls the fixed Zyven fee and defaults to `0.50`. `CELCOIN_TRANSACTION_FEE` represents the contracted provider charge and defaults to `0.00`. Both values use BRL with two decimal places and are validated at application startup.
 
-Credential placeholders live in `.env.example`. Real secrets and certificates must be injected by the deployment environment and must never be committed.
+Credential placeholders live in `.env.example`. Set `CELCOIN_ENABLED=true`, mount the client certificate at `CELCOIN_MTLS_CERTIFICATE_PATH`, and inject credentials through the deployment environment. Real secrets and certificates must never be committed.
 
 ## Official references
 

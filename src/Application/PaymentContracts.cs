@@ -16,18 +16,23 @@ public sealed class PaymentChargeRequest
     public DateTimeOffset ExpiresAt { get; }
     public PaymentPayer? Payer { get; }
     public string? ProviderRecipientId { get; }
-    public PaymentChargeRequest(Payment payment, PaymentPayer? payer = null, string? providerRecipientId = null)
+    public string? PixKey { get; }
+    public string? MerchantName { get; }
+    public string? MerchantCity { get; }
+    public string? MerchantPostalCode { get; }
+    public PaymentChargeRequest(Payment payment, PaymentPayer? payer = null, string? providerRecipientId = null, string? pixKey = null, string? merchantName = null, string? merchantCity = null, string? merchantPostalCode = null)
     {
         PaymentId = payment.Id; OrganizationId = payment.OrganizationId; MerchantAccountId = payment.MerchantAccountId;
         IdempotencyReference = payment.ExternalReference; Currency = payment.Currency; ExpiresAt = payment.ExpiresAt;
         Amounts = new PaymentAmounts(payment.GrossAmount, payment.DiscountAmount, payment.OrderBumpAmount, payment.PlatformFee, payment.ProviderFee);
-        Payer = payer; ProviderRecipientId = providerRecipientId;
+        Payer = payer; ProviderRecipientId = providerRecipientId; PixKey = pixKey; MerchantName = merchantName; MerchantCity = merchantCity; MerchantPostalCode = merchantPostalCode;
     }
 }
 public sealed record CardChargeRequest(PaymentChargeRequest Charge, string TokenReference);
 public sealed record PaymentLookup(Guid MerchantAccountId, string Provider, string ExternalReference, string? ProviderTransactionId);
 public sealed record PaymentProviderState(string ProviderTransactionId, string Status, decimal GrossAmount, string Currency, DateTimeOffset? PaidAt, DateTimeOffset? ExpiresAt, string? EndToEndId, string? PixCode, string? QrCodeData);
 public sealed record PaymentOperationResult(PaymentProviderState? State, PaymentOperationError? Error);
+public sealed record PixPaymentResponse(Guid Id, string Status, string Amount, string Currency, string? PixCode, string? QrCodeData, DateTimeOffset ExpiresAt, DateTimeOffset? PaidAt);
 public interface IPixProvider
 {
     Task<PaymentOperationResult> CreatePixAsync(PaymentChargeRequest request, CancellationToken ct);

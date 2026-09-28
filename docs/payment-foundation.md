@@ -1,12 +1,12 @@
-# Payment foundation (Phase 6 preparation only)
+# PIX payments with Celcoin
 
-Phase 6 is not complete. Celcoin BaaS is the selected payment provider, but no public payment orchestration endpoint creates a charge yet and checkout continues to display payment unavailability. `UnconfiguredPaymentProcessor` advertises no capabilities and returns typed `Unavailable` without network or persistence operations until the contracted Celcoin product and production credentials are configured.
+The public checkout creates one idempotent Celcoin PIX charge, displays its EMV QR Code and polls payment state. The authenticated Celcoin webhook confirms the exact amount and completes the checkout atomically. When Celcoin is disabled, `UnconfiguredPaymentProcessor` returns typed `Unavailable` without network operations.
 
 ## Domain and money
 
 Each organization created through `OrganizationService` receives one PENDING merchant in the same transaction as its membership/audit. The migration backfills existing organizations as PENDING; neither path approves merchants. The database enforces one merchant per organization and the specified status vocabulary.
 
-`Payment.Prepare` is an in-memory PIX snapshot factory, currently unused by runtime request handlers. It requires an ACTIVE merchant in the same organization, a valid CREATED/unexpired checkout, and explicit fee values. All payment relationships, amount, currency and expiry come from the server snapshot. An adapter implementation will still need to lock/revalidate that snapshot and merchant status during orchestration.
+`Payment.Prepare` creates the authoritative PIX snapshot used at runtime. It requires an ACTIVE merchant in the same organization, a valid CREATED/unexpired checkout, and explicit fee values. All relationships, amount, currency and expiry come from the server snapshot. The orchestration locks and revalidates the checkout before persisting the snapshot.
 
 The platform and provider fees are independent fixed BRL values under `Payments:Fees`. Defaults are `PlatformFixedFee=0.50` and `ProviderFixedFee=0.00`; Docker deployments can override them with `ZYVEN_PLATFORM_FEE` and `CELCOIN_TRANSACTION_FEE`. The Celcoin fee stays zero until the commercial contract provides its real value. Startup rejects negative values and fractional cents. `PaymentFeePolicy` also rejects a checkout whose gross value cannot cover both fees.
 
@@ -16,7 +16,7 @@ All monetary columns are decimal / PostgreSQL numeric(18,2). `PaymentAmounts` re
 
 `IPaymentProcessor`, `IPixProvider` and `ICardProvider` describe transport-neutral operations. Creation requests copy a validated Payment and carry an immutable idempotency reference, monetary breakdown, currency and expiry. Card requests contain only an opaque token reference; no PAN/CVV fields exist. Query/cancellation identify the merchant, provider, external reference and optional transaction ID, so reconciliation can work when a timed-out create has no returned provider ID. Cancellation must only be attempted when advertised by the provider's capabilities. An `Indeterminate` outcome is distinct from a definitive rejection and must be reconciled before retrying.
 
-Celcoin BaaS supports fixed-value and percentage split for dynamic PIX charges. Zyven will use a fixed split amount for its configurable platform fee. The live adapter remains disabled until the seller onboarding model, originator account, Pix key, merchant data, mTLS certificate, webhook authentication and reconciliation rules are known from the Celcoin contract.
+Celcoin BaaS supports fixed-value split for dynamic PIX charges. Zyven sends its fixed configurable platform fee to the configured platform account. The seller account originates the charge and supplies its Pix key and merchant identity.
 
 Organizations link a Celcoin BaaS account through `PUT /api/organizations/{id}/payment-account`. Only owners and administrators may activate it. Account identifiers are unique across tenants and the mutation is audited. Linking an account records onboarding evidence; it does not enable payment creation by itself.
 
@@ -28,6 +28,6 @@ Payment foreign keys include OrganizationId for merchant, customer, checkout and
 
 Future migrations changing these columns must preserve the custom constraints. Up adds the snapshot key/FK after creating Payments; Down drops Payments first and then the snapshot key. The EF snapshot describes the remaining schema and tenant keys. Integration coverage exercises empty database migration (normal fixture), upgrade with existing checkout/organizations, mutable customer before payment, rejected link updates after payment, status/money constraints and scoped uniqueness. Down/up runs only against a generated disposable test database.
 
-## Required before real integration
+## Required before production activation
 
-Complete Celcoin BaaS contracting and homologation, then supply the client credentials, mTLS certificate, originator account, Pix key, merchant data, public webhook URL and seller account identifiers. Implement durable orchestration with network calls outside database transactions, safe recovery of unknown outcomes, webhook validation, statement-based reconciliation and real account evidence. Do not enable the UI/payment path or mark Phase 6 complete until that work passes. No Phase 7 webhook implementation is included here.
+Complete Celcoin BaaS contracting and homologation, then supply client credentials, the PFX mTLS certificate, platform account and webhook credentials. Register the public `/api/webhooks/celcoin` URL at Celcoin and activate each seller with its account, Pix key and merchant data. Unknown transport outcomes intentionally remain PROCESSING; operational reconciliation against the Celcoin statement must resolve them before retrying.
