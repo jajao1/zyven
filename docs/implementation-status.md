@@ -9,9 +9,9 @@ A especificação mestre permanece a autoridade. Este mapa registra a sequência
 | 3 | Produtos e ofertas | Validada e enviada |
 | 4 | Editor simples, página pública e checkout persistente | Validada e enviada |
 | 5 | Clientes e identificação por organização | Validada e enviada |
-| 6 | Payment core, MerchantAccount e abstração PIX | Preparação parcial; integração real depende do PSP/banco |
-| 7 | Webhook assinado, confirmação e idempotência | Pendente |
-| 8 | Ledger imutável, wallet e regras de taxas | Pendente |
+| 6 | Payment core, MerchantAccount e cobrança PIX Celcoin | Validada e enviada; ativação real depende das credenciais Celcoin |
+| 7 | Webhook autenticado, confirmação e idempotência | Validada e enviada |
+| 8 | Ledger imutável, wallet e regras de taxas | Validada e enviada |
 | 9 | Fulfillment e entitlements | Pendente |
 | 10 | Arquivos protegidos e external link | Pendente |
 | 11 | Telegram | Após primeiro fluxo completo |

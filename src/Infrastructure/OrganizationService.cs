@@ -36,6 +36,7 @@ public sealed class OrganizationService(ZyvenDbContext db, TenantAuthorization t
         var org = new Organization { Name = name, CreatedAt = now, UpdatedAt = now };
         db.Organizations.Add(org);
         db.MerchantAccounts.Add(new() { OrganizationId = org.Id, CreatedAt = now, UpdatedAt = now });
+        db.LedgerAccounts.AddRange(LedgerAccount.CreateChart(org.Id, now));
         db.OrganizationMembers.Add(new() { Organization = org, UserId = userId, Role = OrganizationRoles.Owner, CreatedAt = now });
         Audit(org.Id, userId, org.Id, "organization.created");
         // SaveChanges wraps the organization, pending merchant, owner membership and audit in one transaction.

@@ -7,7 +7,7 @@ namespace Zyven.Infrastructure;
 
 public enum WebhookApplyResult { Applied, Duplicate, Ignored, Rejected }
 
-public sealed class CelcoinWebhookService(ZyvenDbContext db, TimeProvider time)
+public sealed class CelcoinWebhookService(ZyvenDbContext db, LedgerService ledger, TimeProvider time)
 {
     public async Task<WebhookApplyResult> Apply(byte[] payload, CancellationToken ct)
     {
@@ -36,6 +36,7 @@ public sealed class CelcoinWebhookService(ZyvenDbContext db, TimeProvider time)
             if (payment.ProviderTransactionId is not null && transactionId != payment.ProviderTransactionId) throw new InvalidOperationException("Provider transaction does not match.");
             payment.ConfirmPaid(endToEnd ?? "", amount ?? -1m, EventTime(root, body));
             var checkout = await db.Checkouts.SingleAsync(x => x.Id == payment.CheckoutSessionId && x.OrganizationId == payment.OrganizationId, ct); checkout.Status = "COMPLETED";
+            await ledger.PostCapturedPayment(payment, ct);
             evt.Status = "APPLIED"; evt.ProcessedAt = time.GetUtcNow(); await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct); return WebhookApplyResult.Applied;
         }
         catch (InvalidOperationException) { evt.Status = "REJECTED"; evt.ProcessedAt = time.GetUtcNow(); await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct); return WebhookApplyResult.Rejected; }
