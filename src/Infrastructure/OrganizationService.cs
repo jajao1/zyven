@@ -55,6 +55,22 @@ public sealed class OrganizationService(ZyvenDbContext db, TenantAuthorization t
         return Response(org, actor.Role);
     }
 
+    public async Task<PaymentAccountResponse> ConnectPaymentAccount(Guid id, Guid userId, PaymentAccountRequest request, CancellationToken ct)
+    {
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        await Lock(id, ct);
+        var actor = await tenants.RequireMembership(id, userId, ct);
+        if (actor.Role is not (OrganizationRoles.Owner or OrganizationRoles.Admin)) throw Forbidden();
+        var merchant = await db.MerchantAccounts.SingleAsync(x => x.OrganizationId == id, ct);
+        try { merchant.Activate(request.ProviderRecipientId ?? "", time.GetUtcNow()); }
+        catch (ArgumentException) { throw new OrganizationException(400, "Informe o identificador de recebedor da SyncPay."); }
+        Audit(id, userId, merchant.Id, "payment_account.connected");
+        try { await db.SaveChangesAsync(ct); }
+        catch (DbUpdateException) { throw new OrganizationException(409, "Esta conta SyncPay já está vinculada a outra organização."); }
+        await transaction.CommitAsync(ct);
+        return new(merchant.Status, merchant.ProviderRecipientId);
+    }
+
     public async Task<PageResponse<MemberResponse>> Members(Guid id, Guid userId, int page, int pageSize, CancellationToken ct)
     {
         await tenants.RequireMembership(id, userId, ct);

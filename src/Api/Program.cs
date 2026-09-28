@@ -38,7 +38,17 @@ builder.Services.AddOptions<PaymentFeeOptions>()
     .Validate(x => x.ProviderFixedFee >= 0 && decimal.Truncate(x.ProviderFixedFee * 100) == x.ProviderFixedFee * 100, "Payments:Fees:ProviderFixedFee must be a non-negative BRL amount with at most two decimal places.")
     .ValidateOnStart();
 builder.Services.AddSingleton<PaymentFeePolicy>();
-builder.Services.AddSingleton<IPaymentProcessor, UnconfiguredPaymentProcessor>();
+builder.Services.Configure<SyncPayOptions>(builder.Configuration.GetSection(SyncPayOptions.SectionName));
+if (builder.Configuration.GetValue<bool>("Payments:SyncPay:Enabled"))
+{
+    builder.Services.AddHttpClient<IPaymentProcessor, SyncPayPaymentProcessor>((services, client) =>
+    {
+        var options = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<SyncPayOptions>>().Value;
+        client.BaseAddress = new Uri(options.BaseUrl);
+        client.Timeout = TimeSpan.FromSeconds(15);
+    });
+}
+else builder.Services.AddSingleton<IPaymentProcessor, UnconfiguredPaymentProcessor>();
 builder.Services.AddScoped<CatalogService>();
 builder.Services.AddScoped<PublicCheckoutService>();
 builder.Services.AddScoped<CustomerService>();

@@ -10,6 +10,8 @@ public sealed class MerchantAccountConfiguration : IEntityTypeConfiguration<Merc
         b.HasOne<Organization>().WithMany().HasForeignKey(x => x.OrganizationId).OnDelete(DeleteBehavior.Restrict);
         b.HasIndex(x => x.OrganizationId).IsUnique();
         b.Property(x => x.Status).HasMaxLength(20).HasDefaultValue("PENDING");
+        b.Property(x => x.ProviderRecipientId).HasMaxLength(200);
+        b.HasIndex(x => x.ProviderRecipientId).IsUnique().HasFilter("\"ProviderRecipientId\" IS NOT NULL");
         b.ToTable(t => t.HasCheckConstraint("CK_MerchantAccounts_Status", "\"Status\" IN ('PENDING','ACTIVE','SUSPENDED','BLOCKED')"));
     }
 }

@@ -65,6 +65,18 @@ public class PaymentFoundationTests
     }
 
     [Fact]
+    public void Merchant_activation_requires_a_syncpay_recipient_identifier()
+    {
+        var merchant = new MerchantAccount { OrganizationId = Guid.NewGuid() };
+
+        Assert.Throws<ArgumentException>(() => merchant.Activate(" ", DateTimeOffset.UtcNow));
+        merchant.Activate("seller-123", DateTimeOffset.UtcNow);
+
+        Assert.Equal("ACTIVE", merchant.Status);
+        Assert.Equal("seller-123", merchant.ProviderRecipientId);
+    }
+
+    [Fact]
     public async Task Unconfigured_processor_returns_typed_unavailable_for_every_operation()
     {
         IPaymentProcessor processor = new UnconfiguredPaymentProcessor();

@@ -7,10 +7,27 @@ using Npgsql;
 using Zyven.Application;
 using Zyven.Domain;
 using Zyven.Infrastructure;
+using System.Net;
+using System.Net.Http.Json;
 namespace IntegrationTests;
 
 public class PaymentFoundationTests
 {
+    [Fact]
+    public async Task Owner_connects_the_organization_to_a_syncpay_recipient()
+    {
+        await using var app = new WebApplicationFactory<Program>();
+        var fixture = await PublicCheckoutTests.Fixture(app); using var client = fixture.Client;
+
+        var response = await client.PutAsJsonAsync($"/api/organizations/{fixture.Org}/payment-account", new { providerRecipientId = $"seller-{Guid.NewGuid():N}" });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var scope = app.Services.CreateScope();
+        var merchant = await scope.ServiceProvider.GetRequiredService<ZyvenDbContext>().MerchantAccounts.SingleAsync(x => x.OrganizationId == fixture.Org);
+        Assert.Equal("ACTIVE", merchant.Status);
+        Assert.StartsWith("seller-", merchant.ProviderRecipientId);
+    }
+
     [Fact]
     public async Task Organization_creation_provisions_pending_merchant_and_runtime_cannot_charge()
     {

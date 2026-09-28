@@ -1,6 +1,6 @@
 # Payment foundation (Phase 6 preparation only)
 
-Phase 6 is not complete. No real provider is configured, no payment endpoint creates a charge, and checkout continues to display payment unavailability. The registered `UnconfiguredPaymentProcessor` advertises no capabilities and returns typed `Unavailable` for creation, query and cancellation. It performs no persistence or network operations and never fabricates a PIX code or QR image.
+Phase 6 is not complete. A SyncPay PIX transport adapter is available, but no public payment orchestration endpoint creates a charge yet and checkout continues to display payment unavailability. SyncPay remains disabled by default; while disabled, `UnconfiguredPaymentProcessor` advertises no capabilities and returns typed `Unavailable` without network or persistence operations.
 
 ## Domain and money
 
@@ -16,6 +16,10 @@ All monetary columns are decimal / PostgreSQL numeric(18,2). `PaymentAmounts` re
 
 `IPaymentProcessor`, `IPixProvider` and `ICardProvider` describe transport-neutral operations. Creation requests copy a validated Payment and carry an immutable idempotency reference, monetary breakdown, currency and expiry. Card requests contain only an opaque token reference; no PAN/CVV fields exist. Query/cancellation identify the merchant, provider, external reference and optional transaction ID, so reconciliation can work when a timed-out create has no returned provider ID. Cancellation must only be attempted when advertised by the provider's capabilities. An `Indeterminate` outcome is distinct from a definitive rejection and must be reconciled before retrying.
 
+`SyncPayPaymentProcessor` authenticates through `/api/partner/v1/auth-token`, caches the bearer token until shortly before expiry and creates PIX cash-ins at `/api/partner/v1/cash-in`. It sends the configured HTTPS webhook URL and a seller split calculated from the persisted net amount. Timeouts, transport errors, rate limits and server errors are `Indeterminate`; callers must reconcile them before retrying because SyncPay does not document a create idempotency key. Invalid requests are definitive rejections. Card, cancellation and query remain disabled in this adapter until their complete orchestration is implemented.
+
+Organizations link a SyncPay recipient through `PUT /api/organizations/{id}/payment-account`. Only owners and administrators may activate it. Recipient identifiers are unique across tenants and the mutation is audited. Enabling the adapter requires `SYNCPAY_ENABLED=true`, `SYNCPAY_CLIENT_ID`, `SYNCPAY_CLIENT_SECRET` and an HTTPS `SYNCPAY_WEBHOOK_URL`.
+
 ExternalReference is unique per merchant, and provider transaction IDs are unique per (merchant, provider). IDs from different providers/accounts are not assumed globally unique. This is storage preparation, not a complete idempotent create/retry protocol or payment state machine. Provider responses must later be validated against the persisted amount/currency/expiry; a response alone must never mark an order paid.
 
 ## Persistence invariants and migration ownership
@@ -26,4 +30,4 @@ Future migrations changing these columns must preserve the custom constraints. U
 
 ## Required before real integration
 
-Select the PSP and obtain official authentication, merchant onboarding/approval, create PIX, status query, cancellation capability, idempotency/retry semantics, sandbox and signed-webhook documentation. Supply server-side fee configuration and secret provisioning. Then implement durable orchestration with network calls outside database transactions, safe recovery of unknown outcomes, reconciliation, signature validation, and real sandbox evidence. Do not enable the UI/payment path or mark Phase 6 complete until that work passes. No Phase 7 webhook implementation is included here.
+Supply real SyncPay credentials and recipient identifiers. Then implement durable orchestration with network calls outside database transactions, safe recovery of unknown outcomes, the V2 transaction query, signed webhook validation and real account evidence. Do not enable the UI/payment path or mark Phase 6 complete until that work passes. No Phase 7 webhook implementation is included here.

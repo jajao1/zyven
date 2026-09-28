@@ -25,8 +25,14 @@ public sealed class MerchantAccount
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid OrganizationId { get; set; }
     public string Status { get; set; } = "PENDING";
+    public string? ProviderRecipientId { get; private set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
+    public void Activate(string providerRecipientId, DateTimeOffset now)
+    {
+        if (string.IsNullOrWhiteSpace(providerRecipientId) || providerRecipientId.Length > 200) throw new ArgumentException("A valid provider recipient identifier is required.", nameof(providerRecipientId));
+        ProviderRecipientId = providerRecipientId.Trim(); Status = "ACTIVE"; UpdatedAt = now;
+    }
 }
 public sealed class Payment
 {
