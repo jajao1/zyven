@@ -59,11 +59,19 @@ public class PixPaymentTests
         (await buyer.PostAsync($"/api/public/checkouts/{checkout!.Id}/payments/pix", null)).EnsureSuccessStatusCode();
         using var scope = app.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<ZyvenDbContext>(); var reference = await db.Payments.Where(x => x.CheckoutSessionId == checkout.Id).Select(x => x.ExternalReference).SingleAsync();
         using var webhook = app.CreateClient();
-        var payload = new { webhookId = "event-" + Guid.NewGuid().ToString("N"), RequestBody = new { ClientRequestId = reference, TransactionIdBRCode = "celcoin-1", Amount = 19.90m, EndToEndId = "E123" } };
+        var eventId = "event-" + Guid.NewGuid().ToString("N");
+        var payload = new { webhookId = eventId, status = "CONFIRMED", createTimestamp = "2026-09-27T20:15:00Z", RequestBody = new { ClientRequestId = reference, TransactionIdBRCode = "celcoin-1", Amount = 19.90m, EndToEndId = "E123" } };
         Assert.Equal(HttpStatusCode.Unauthorized, (await webhook.PostAsJsonAsync("/api/webhooks/celcoin", payload)).StatusCode);
         webhook.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes("celcoin:secret")));
+        var mismatch = new { webhookId = eventId + "-mismatch", status = "CONFIRMED", RequestBody = new { ClientRequestId = reference, TransactionIdBRCode = "celcoin-1", Amount = 18m, EndToEndId = "E-wrong" } };
+        Assert.Equal(HttpStatusCode.OK, (await webhook.PostAsJsonAsync("/api/webhooks/celcoin", mismatch)).StatusCode);
+        Assert.Equal("PENDING", (await buyer.GetFromJsonAsync<PixPaymentResponse>($"/api/public/checkouts/{checkout.Id}/payments/pix"))!.Status);
         Assert.Equal(HttpStatusCode.OK, (await webhook.PostAsJsonAsync("/api/webhooks/celcoin", payload)).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await webhook.PostAsJsonAsync("/api/webhooks/celcoin", payload)).StatusCode);
-        var paid = await buyer.GetFromJsonAsync<PixPaymentResponse>($"/api/public/checkouts/{checkout.Id}/payments/pix"); Assert.Equal("PAID", paid!.Status); Assert.NotNull(paid.PaidAt);
+        var paid = await buyer.GetFromJsonAsync<PixPaymentResponse>($"/api/public/checkouts/{checkout.Id}/payments/pix"); Assert.Equal("PAID", paid!.Status); Assert.Equal(DateTimeOffset.Parse("2026-09-27T20:15:00Z"), paid.PaidAt);
+        Assert.Equal(2, await db.PaymentWebhookEvents.CountAsync(x => x.PaymentId == paid.Id));
+        var parallelId = "event-parallel-" + Guid.NewGuid().ToString("N"); var unknown = new { webhookId = parallelId, status = "CONFIRMED", RequestBody = new { ClientRequestId = "unknown", Amount = 19.90m, EndToEndId = "E-unknown" } };
+        var parallel = await Task.WhenAll(webhook.PostAsJsonAsync("/api/webhooks/celcoin", unknown), webhook.PostAsJsonAsync("/api/webhooks/celcoin", unknown)); Assert.All(parallel, response => Assert.Equal(HttpStatusCode.OK, response.StatusCode));
+        db.ChangeTracker.Clear(); Assert.Equal(1, await db.PaymentWebhookEvents.CountAsync(x => x.ExternalEventId == parallelId));
     }
 }
