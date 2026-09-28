@@ -18,18 +18,28 @@ it('renders escaped content and submits buyer data without client price', async 
   vi.stubGlobal('fetch', fetcher)
   render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><PublicOfferPage slug="course" /></QueryClientProvider>)
   expect(await screen.findByText('<script>bad()</script>')).toBeInTheDocument(); expect(document.title).toBe('<script>bad()</script> — Zyven'); expect(document.querySelector('script')).toBeNull()
-  fireEvent.change(screen.getByLabelText('Nome completo'), { target: { value: 'Buyer Name' } }); fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'buyer@example.test' } }); fireEvent.change(screen.getByLabelText('Empresa *'), { target: { value: 'Company' } })
+  fireEvent.change(screen.getByLabelText('Nome completo'), { target: { value: 'Buyer Name' } }); fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'buyer@example.test' } }); fireEvent.change(screen.getByLabelText('CPF ou CNPJ'), { target: { value: '12345678909' } }); fireEvent.change(screen.getByLabelText('Empresa *'), { target: { value: 'Company' } })
   fireEvent.click(screen.getByRole('button', { name: 'Continuar' }))
-  expect(await screen.findByText('Dados recebidos')).toBeInTheDocument()
+  expect(await screen.findByText('Finalize seu pedido')).toBeInTheDocument()
   await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2))
   const request = JSON.parse(fetcher.mock.calls[1][1].body); expect(request).not.toHaveProperty('price'); expect(request.fields.company).toBe('Company'); expect(fetcher.mock.calls[1][1].credentials).toBe('same-origin')
+})
+it('creates and displays a PIX charge after checkout', async () => {
+  const offer = { slug: 'course', name: 'Course', productName: 'Course', price: '19.90', currency: 'BRL', billingType: 'ONE_TIME', page: { title: 'Course', subtitle: '', description: '', benefits: [], testimonials: [], faq: [], guarantee: '', cta: 'Continuar', color: '#002fa7', fields: [] } }
+  const checkout = { id: 'checkout-id', offerSlug: 'course', status: 'CREATED', price: '19.90', currency: 'BRL', expiresAt: '2099-01-01T00:00:00Z', name: 'Buyer', email: 'buyer@example.test', fields: {} }
+  const fetcher = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify(offer))).mockResolvedValueOnce(new Response(JSON.stringify(checkout), { status: 201 })).mockResolvedValueOnce(new Response(JSON.stringify({ id: 'payment', status: 'PENDING', amount: '19.90', currency: 'BRL', pixCode: '000201PIX', qrCodeData: 'tx', expiresAt: '2099-01-01T00:00:00Z' })))
+  vi.stubGlobal('fetch', fetcher)
+  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><PublicOfferPage slug="course" /></QueryClientProvider>)
+  await screen.findByRole('heading', { name: 'Seus dados' }); fireEvent.change(screen.getByLabelText('Nome completo'), { target: { value: 'Buyer Name' } }); fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'buyer@example.test' } }); fireEvent.change(screen.getByLabelText('CPF ou CNPJ'), { target: { value: '12345678909' } }); fireEvent.click(screen.getByRole('button', { name: 'Continuar' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Gerar PIX' }))
+  expect(await screen.findByText('000201PIX')).toBeInTheDocument(); expect(await screen.findByAltText('QR Code PIX')).toBeInTheDocument()
 })
 it('does not show a receipt belonging to another offer', async () => {
   window.history.replaceState(null, '', '/o/second?checkout=first-checkout')
   vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => Promise.resolve(new Response(JSON.stringify(url.includes('/offers/') ? { slug: 'second', name: 'Second', productName: 'Second product', price: '50.00', currency: 'BRL', billingType: 'ONE_TIME', page: { title: 'Second offer', subtitle: '', description: '', benefits: [], testimonials: [], faq: [], guarantee: '', cta: 'Continue', color: '#002fa7', fields: [] } } : { id: 'first-checkout', offerSlug: 'first', status: 'CREATED', price: '19.90', currency: 'BRL', expiresAt: '2099-01-01T00:00:00Z', name: 'Other buyer', email: 'other@example.test', fields: {} })))))
   render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><PublicOfferPage slug="second" /></QueryClientProvider>)
   expect(await screen.findByText('Este checkout pertence a outra oferta.')).toBeInTheDocument()
-  expect(screen.queryByText('Dados recebidos')).not.toBeInTheDocument()
+  expect(screen.queryByText('Finalize seu pedido')).not.toBeInTheDocument()
   expect(screen.queryByText(/Other buyer/)).not.toBeInTheDocument()
 })
 

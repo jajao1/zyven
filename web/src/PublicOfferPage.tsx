@@ -3,11 +3,12 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { pageClient, type BuyerInput, type Checkout, type PublicOffer } from './lib/page-client'
+import QRCode from 'qrcode'
+import { pageClient, type BuyerInput, type Checkout, type PixPayment, type PublicOffer } from './lib/page-client'
 import { Button } from './components/ui/button'
 import { Input } from './components/ui/input'
 import { Label } from './components/ui/label'
-const buyerSchema = z.object({ name: z.string().trim().min(2, 'Informe seu nome completo.').max(200), email: z.string().trim().email('Informe um email válido.').max(254), phone: z.string().max(30).refine(value => !value.trim() || /^\+[1-9][0-9]{6,14}$/.test(value.trim().replace(/[ ()-]/g, '')), 'Informe o telefone com + e código do país.'), document: z.string().max(40).regex(/^[a-zA-Z0-9 ./-]*$/, 'Confira o documento.'), fields: z.record(z.string(), z.string().max(1000)) })
+const buyerSchema = z.object({ name: z.string().trim().min(2, 'Informe seu nome completo.').max(200), email: z.string().trim().email('Informe um email válido.').max(254), phone: z.string().max(30).refine(value => !value.trim() || /^\+[1-9][0-9]{6,14}$/.test(value.trim().replace(/[ ()-]/g, '')), 'Informe o telefone com + e código do país.'), document: z.string().regex(/^\D*(?:\d\D*){11}(?:(?:\d\D*){3})?$/, 'Informe um CPF ou CNPJ válido.').max(40), fields: z.record(z.string(), z.string().max(1000)) })
 function CheckoutForm({ offer, complete }: { offer: PublicOffer; complete: (value: Checkout) => void }) {
   const form = useForm<BuyerInput>({ resolver: zodResolver(buyerSchema), defaultValues: { name: '', email: '', phone: '', document: '', fields: {} } })
   const mutation = useMutation({ mutationFn: (data: BuyerInput) => pageClient.create(offer.slug, data), onSuccess: complete })
@@ -15,15 +16,26 @@ function CheckoutForm({ offer, complete }: { offer: PublicOffer; complete: (valu
     <div className="field"><Label htmlFor="buyer-name">Nome completo</Label><Input id="buyer-name" autoComplete="name" maxLength={200} {...form.register('name')} /></div>
     <div className="field"><Label htmlFor="buyer-email">Email</Label><Input id="buyer-email" type="email" autoComplete="email" maxLength={254} {...form.register('email')} /></div>
     <div className="field"><Label htmlFor="buyer-phone">Telefone (opcional)</Label><Input id="buyer-phone" type="tel" autoComplete="tel" maxLength={30} aria-describedby="buyer-phone-help" {...form.register('phone')} /><p className="field-help" id="buyer-phone-help">Inclua + e o código do país. Exemplo: +55 11 99999-0000.</p></div>
-    <div className="field"><Label htmlFor="buyer-document">Documento (opcional)</Label><Input id="buyer-document" maxLength={40} {...form.register('document')} /></div>
+    <div className="field"><Label htmlFor="buyer-document">CPF ou CNPJ</Label><Input id="buyer-document" inputMode="numeric" autoComplete="off" maxLength={40} {...form.register('document')} /></div>
     {offer.page.fields.map(field => <div className="field" key={field.key}><Label htmlFor={`buyer-custom-${field.key}`}>{field.label}{field.required ? ' *' : ''}</Label>{field.type === 'textarea' ? <textarea id={`buyer-custom-${field.key}`} maxLength={1000} required={field.required} {...form.register(`fields.${field.key}`)} /> : <Input id={`buyer-custom-${field.key}`} maxLength={1000} required={field.required} {...form.register(`fields.${field.key}`)} />}</div>)}
     {Object.entries(form.formState.errors).map(([key, error]) => <p className="field-error" role="alert" key={key}>{typeof error.message === 'string' ? error.message : 'Confira os campos adicionais.'}</p>)}
     {mutation.error && <p className="error-notice" role="alert">{mutation.error.message}</p>}
-    <div className="checkout-total"><span>Total da oferta</span><strong>{offer.currency} {offer.price}</strong></div><p className="field-help">{offer.billingType === 'SUBSCRIPTION' ? 'Oferta de assinatura.' : 'Pagamento único.'} O pagamento ainda não está disponível. Nenhuma cobrança será feita nesta etapa.</p>
+    <div className="checkout-total"><span>Total da oferta</span><strong>{offer.currency} {offer.price}</strong></div><p className="field-help">{offer.billingType === 'SUBSCRIPTION' ? 'Oferta de assinatura.' : 'Pagamento único.'} Você poderá gerar o PIX na próxima etapa.</p>
     <Button disabled={mutation.isPending}>{mutation.isPending ? 'Salvando...' : offer.page.cta}</Button>
   </form>
 }
-function Receipt({ value }: { value: Checkout }) { return <section className="checkout-receipt"><p className="eyebrow">Checkout salvo</p><h2>Dados recebidos</h2><p>{value.name}, seus dados foram salvos. Nenhum pagamento foi realizado.</p><p className="checkout-total">{value.currency} {value.price}</p><p>Este checkout fica disponível até {new Date(value.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.</p><p className="field-help">A etapa de pagamento ainda não está disponível.</p></section> }
+function PixCode({ value }: { value: string }) {
+  const [src, setSrc] = useState('')
+  useEffect(() => { let active = true; void QRCode.toString(value, { type: 'svg', width: 240, margin: 1 }).then(svg => { if (active) setSrc(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`) }); return () => { active = false } }, [value])
+  return <>{src && <img className="pix-qr" src={src} alt="QR Code PIX" />}<code className="pix-code">{value}</code><Button type="button" variant="outline" onClick={() => void navigator.clipboard.writeText(value)}>Copiar código PIX</Button></>
+}
+function Receipt({ value }: { value: Checkout }) {
+  const [payment, setPayment] = useState<PixPayment | null>(null)
+  const mutation = useMutation({ mutationFn: () => pageClient.createPix(value.id), onSuccess: setPayment })
+  useEffect(() => { if (!payment || !['PENDING', 'PROCESSING'].includes(payment.status)) return; const timer = window.setInterval(() => void pageClient.pix(value.id).then(setPayment).catch(() => undefined), 3000); return () => window.clearInterval(timer) }, [payment, value.id])
+  if (payment?.status === 'PAID') return <section className="checkout-receipt"><p className="eyebrow">Pagamento confirmado</p><h2>PIX recebido</h2><p>{value.name}, seu pagamento de {payment.currency} {payment.amount} foi confirmado.</p></section>
+  return <section className="checkout-receipt"><p className="eyebrow">Pagamento PIX</p><h2>{payment ? 'Escaneie para pagar' : 'Finalize seu pedido'}</h2><p>{value.name}, pague {value.currency} {value.price} até {new Date(value.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.</p>{payment?.pixCode ? <PixCode value={payment.pixCode} /> : <Button disabled={mutation.isPending} onClick={() => mutation.mutate()}>{mutation.isPending ? 'Gerando PIX...' : 'Gerar PIX'}</Button>}{mutation.error && <p role="alert" className="error-notice">{mutation.error.message}</p>}{payment && <p role="status">Aguardando confirmação do pagamento.</p>}</section>
+}
 export function PublicOfferPage({ slug }: { slug: string }) {
   const [checkoutId, setCheckoutId] = useState(() => new URLSearchParams(window.location.search).get('checkout'))
   const [created, setCreated] = useState<Checkout | null>(null)
