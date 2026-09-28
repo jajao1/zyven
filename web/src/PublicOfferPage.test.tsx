@@ -43,6 +43,17 @@ it('does not show a receipt belonging to another offer', async () => {
   expect(screen.queryByText(/Other buyer/)).not.toBeInTheDocument()
 })
 
+it('restores a completed external-link delivery from the authenticated checkout', async () => {
+  window.history.replaceState(null, '', '/o/course?checkout=paid-checkout')
+  const offer = { slug: 'course', name: 'Course', productName: 'Course', price: '19.90', currency: 'BRL', billingType: 'ONE_TIME', page: { title: 'Course', subtitle: '', description: '', benefits: [], testimonials: [], faq: [], guarantee: '', cta: 'Continue', color: '#002fa7', fields: [] } }
+  const checkout = { id: 'paid-checkout', offerSlug: 'course', status: 'COMPLETED', price: '19.90', currency: 'BRL', expiresAt: '2026-01-01T00:00:00Z', name: 'Buyer', email: 'buyer@example.test', fields: {} }
+  const delivery = { entitlementId: 'entitlement', status: 'ACTIVE', items: [{ id: 'delivery', type: 'EXTERNAL_LINK', name: 'Acessar curso', url: 'https://members.example.test/course', deliveredAt: '2026-01-01T00:00:00Z' }] }
+  vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => Promise.resolve(new Response(JSON.stringify(url.includes('/delivery') ? delivery : url.includes('/checkouts/') ? checkout : offer)))))
+  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><PublicOfferPage slug="course" /></QueryClientProvider>)
+  const access = await screen.findByRole('link', { name: 'Acessar curso' })
+  expect(access).toHaveAttribute('href', 'https://members.example.test/course'); expect(access).toHaveAttribute('rel', 'noopener noreferrer')
+})
+
 it('uses a neutral title while loading and when the offer is unavailable', async () => {
   document.title = 'Zyven — sua conta'
   let release!: (response: Response) => void

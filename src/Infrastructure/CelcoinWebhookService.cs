@@ -7,7 +7,7 @@ namespace Zyven.Infrastructure;
 
 public enum WebhookApplyResult { Applied, Duplicate, Ignored, Rejected }
 
-public sealed class CelcoinWebhookService(ZyvenDbContext db, LedgerService ledger, TimeProvider time)
+public sealed class CelcoinWebhookService(ZyvenDbContext db, LedgerService ledger, FulfillmentService fulfillment, TimeProvider time)
 {
     public async Task<WebhookApplyResult> Apply(byte[] payload, CancellationToken ct)
     {
@@ -27,7 +27,7 @@ public sealed class CelcoinWebhookService(ZyvenDbContext db, LedgerService ledge
         var reference = Text(body, "ClientRequestId", "clientRequestId");
         var transactionId = Text(body, "transactionIdBRCode", "TransactionId", "transactionId");
         Payment? payment = null;
-        if (!string.IsNullOrWhiteSpace(reference)) payment = await db.Payments.SingleOrDefaultAsync(x => x.ExternalReference == reference, ct);
+        if (!string.IsNullOrWhiteSpace(reference)) payment = await db.Payments.FromSqlInterpolated($"SELECT * FROM \"Payments\" WHERE \"ExternalReference\" = {reference} FOR UPDATE").SingleOrDefaultAsync(ct);
         if (payment is null) { evt.Status = "IGNORED"; evt.ProcessedAt = time.GetUtcNow(); await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct); return WebhookApplyResult.Ignored; }
         evt.PaymentId = payment.Id;
         var amount = Decimal(body, "Amount", "amount"); var endToEnd = Text(body, "EndToEndId", "endToEndId");
@@ -37,6 +37,7 @@ public sealed class CelcoinWebhookService(ZyvenDbContext db, LedgerService ledge
             payment.ConfirmPaid(endToEnd ?? "", amount ?? -1m, EventTime(root, body));
             var checkout = await db.Checkouts.SingleAsync(x => x.Id == payment.CheckoutSessionId && x.OrganizationId == payment.OrganizationId, ct); checkout.Status = "COMPLETED";
             await ledger.PostCapturedPayment(payment, ct);
+            await fulfillment.FulfillPaidPayment(payment, ct);
             evt.Status = "APPLIED"; evt.ProcessedAt = time.GetUtcNow(); await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct); return WebhookApplyResult.Applied;
         }
         catch (InvalidOperationException) { evt.Status = "REJECTED"; evt.ProcessedAt = time.GetUtcNow(); await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct); return WebhookApplyResult.Rejected; }

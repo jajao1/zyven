@@ -57,6 +57,7 @@ public sealed class PixPaymentService(ZyvenDbContext db, IPaymentProcessor provi
     {
         ValidateSecret(secret); var hash = Hash(secret!);
         var checkout = await db.Checkouts.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id && x.AccessHash == hash, ct) ?? throw Missing();
+        if (checkout.Status == "COMPLETED" && checkout.CreatedAt <= time.GetUtcNow().AddDays(-30)) throw Missing();
         if (checkout.Status is not ("CREATED" or "COMPLETED")) throw new OrganizationException(410, "Este checkout não está disponível.");
         return checkout;
     }

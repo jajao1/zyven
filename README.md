@@ -37,7 +37,7 @@ O Compose é um ambiente de **Development**. Em produção, configurar TLS no pr
 
 `src/Domain` contém entidades; `src/Application`, contratos e validação; `src/Infrastructure`, persistência e serviços; `src/Api`, HTTP; `src/Workers`, processamento Hangfire. `web` usa React, TypeScript, Vite, Tailwind, componentes shadcn/ui, TanStack Query, React Hook Form e Zod. Recharts está disponível para a fase de dashboard.
 
-O núcleo comercial segue **Product → Offer → Checkout → Payment → Entitlement → Fulfillment**. Organizações, catálogo, checkout, cobrança PIX Celcoin, confirmação por webhook e ledger estão implementados. Veja [`docs/organizations.md`](docs/organizations.md) para endpoints e permissões. Nenhum identificador de organização enviado pelo cliente confere acesso por si só. A ativação do provedor exige credenciais Celcoin; entitlement, fulfillment e saques permanecem pendentes.
+O núcleo comercial segue **Product → Offer → Checkout → Payment → Entitlement → Fulfillment**. O primeiro fluxo completo está implementado com cobrança PIX Celcoin, confirmação por webhook, ledger, entitlement e entrega `EXTERNAL_LINK`. Veja [`docs/organizations.md`](docs/organizations.md) para endpoints e permissões. Nenhum identificador de organização enviado pelo cliente confere acesso por si só. A ativação do provedor exige credenciais Celcoin; arquivos protegidos, integrações adicionais e saques permanecem pendentes.
 
 ## Autenticação
 
@@ -88,11 +88,11 @@ Para desenvolver o frontend com a API do Compose: `cd web`, `npm ci`, `npm run d
 
 ## Evolução
 
-As fases seguintes acrescentam entitlement e entrega. O primeiro fluxo completo deve terminar em `EXTERNAL_LINK` após pagamento confirmado no servidor. Telegram e Discord permanecem integrações. A fonte financeira já é o ledger imutável, nunca um saldo editável.
+O primeiro fluxo completo termina em `EXTERNAL_LINK` após pagamento confirmado no servidor. Telegram, Discord e arquivos protegidos permanecem expansões. A fonte financeira é o ledger imutável, nunca um saldo editável.
 
 Catálogo e smoke específico: [docs/catalog.md](docs/catalog.md). Estado e dependências: [docs/implementation-status.md](docs/implementation-status.md).
 
-Página pública e checkout: [docs/public-checkout.md](docs/public-checkout.md). Pagamento PIX e webhook: [docs/celcoin-integration.md](docs/celcoin-integration.md). Ledger e wallet: [docs/ledger.md](docs/ledger.md).
+Página pública e checkout: [docs/public-checkout.md](docs/public-checkout.md). Pagamento PIX e webhook: [docs/celcoin-integration.md](docs/celcoin-integration.md). Ledger e wallet: [docs/ledger.md](docs/ledger.md). Entitlements e entrega: [docs/fulfillment.md](docs/fulfillment.md).
 
 Clientes, normalização e proteção de perfil: [docs/customers.md](docs/customers.md). `./scripts/smoke-customers.ps1` verifica deduplicação, isolamento e privacidade no ambiente local.
 

@@ -60,30 +60,31 @@ public sealed class PublicCheckoutService(ZyvenDbContext db, TenantAuthorization
     }
     public async Task<CheckoutResponse> Read(Guid id, string? secret, CancellationToken ct)
     {
-        var session = await Authorized(id, secret, ct);
+        var session = await Authorized(id, secret, ct, false);
         return Response(session, await Slug(session, ct));
     }
     private Task<string> Slug(CheckoutSession session, CancellationToken ct) => db.Offers.Where(x => x.Id == session.OfferId && x.OrganizationId == session.OrganizationId).Select(x => x.Slug).SingleAsync(ct);
     public async Task<CheckoutResponse> Update(Guid id, string? secret, CheckoutInput input, CancellationToken ct)
     {
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
-        var initial = await Authorized(id, secret, ct);
+        var initial = await Authorized(id, secret, ct, true);
         await db.Organizations.FromSqlInterpolated($"SELECT * FROM \"Organizations\" WHERE \"Id\" = {initial.OrganizationId} FOR UPDATE").SingleAsync(ct);
         // Re-read under the lock: waiting cannot extend expiry or reuse stale checkout data.
         await db.Entry(initial).ReloadAsync(ct);
-        var session = await Authorized(id, secret, ct);
+        var session = await Authorized(id, secret, ct, true);
         ValidateInput(input, Deserialize<CheckoutField[]>(session.FormJson));
         session.CustomerId = await customers.Resolve(session.OrganizationId, input, ct);
         SetInput(session, input); await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
         return Response(session, await Slug(session, ct));
     }
-    private async Task<CheckoutSession> Authorized(Guid id, string? secret, CancellationToken ct)
+    private async Task<CheckoutSession> Authorized(Guid id, string? secret, CancellationToken ct, bool requireEditable)
     {
         if (secret is null || secret.Length != 96) throw Missing();
         var hash = Hash(secret);
         var session = await db.Checkouts.SingleOrDefaultAsync(x => x.Id == id && x.AccessHash == hash, ct) ?? throw Missing();
-        if (session.ExpiresAt <= time.GetUtcNow() || session.Status != "CREATED") throw new OrganizationException(410, "Este checkout expirou ou não está disponível. Comece novamente pela oferta.");
-        if (!await db.Offers.AnyAsync(x => x.Id == session.OfferId && x.OrganizationId == session.OrganizationId && x.Status == "ACTIVE" && db.Products.Any(p => p.Id == x.ProductId && p.OrganizationId == x.OrganizationId && p.Status == "ACTIVE"), ct)) throw Missing();
+        if (session.Status == "COMPLETED" && session.CreatedAt <= time.GetUtcNow().AddDays(-30)) throw Missing();
+        if ((session.Status != "COMPLETED" && (session.ExpiresAt <= time.GetUtcNow() || session.Status != "CREATED")) || (requireEditable && session.Status != "CREATED")) throw new OrganizationException(410, "Este checkout expirou ou não está disponível. Comece novamente pela oferta.");
+        if (session.Status != "COMPLETED" && !await db.Offers.AnyAsync(x => x.Id == session.OfferId && x.OrganizationId == session.OrganizationId && x.Status == "ACTIVE" && db.Products.Any(p => p.Id == x.ProductId && p.OrganizationId == x.OrganizationId && p.Status == "ACTIVE"), ct)) throw Missing();
         return session;
     }
     private static void ValidateInput(CheckoutInput input, CheckoutField[] fields)

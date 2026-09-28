@@ -10,6 +10,9 @@ public sealed class ZyvenDbContext(DbContextOptions<ZyvenDbContext> options) : D
     public DbSet<LedgerAccount> LedgerAccounts => Set<LedgerAccount>();
     public DbSet<LedgerTransaction> LedgerTransactions => Set<LedgerTransaction>();
     public DbSet<LedgerEntry> LedgerEntries => Set<LedgerEntry>();
+    public DbSet<FulfillmentDefinition> FulfillmentDefinitions => Set<FulfillmentDefinition>();
+    public DbSet<Entitlement> Entitlements => Set<Entitlement>();
+    public DbSet<FulfillmentExecution> FulfillmentExecutions => Set<FulfillmentExecution>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<OfferPage> OfferPages => Set<OfferPage>();
     public DbSet<CheckoutSession> Checkouts => Set<CheckoutSession>();
@@ -28,6 +31,7 @@ public sealed class ZyvenDbContext(DbContextOptions<ZyvenDbContext> options) : D
         b.ApplyConfiguration(new PaymentConfiguration());
         b.ApplyConfiguration(new PaymentWebhookEventConfiguration());
         b.ApplyConfiguration(new LedgerAccountConfiguration()); b.ApplyConfiguration(new LedgerTransactionConfiguration()); b.ApplyConfiguration(new LedgerEntryConfiguration());
+        b.ApplyConfiguration(new FulfillmentDefinitionConfiguration()); b.ApplyConfiguration(new EntitlementConfiguration()); b.ApplyConfiguration(new FulfillmentExecutionConfiguration());
         b.ApplyConfiguration(new CustomerConfiguration());
         b.ApplyConfiguration(new OfferPageConfiguration());
         b.ApplyConfiguration(new CheckoutConfiguration());

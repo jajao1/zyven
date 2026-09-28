@@ -12,8 +12,8 @@ A especificação mestre permanece a autoridade. Este mapa registra a sequência
 | 6 | Payment core, MerchantAccount e cobrança PIX Celcoin | Validada e enviada; ativação real depende das credenciais Celcoin |
 | 7 | Webhook autenticado, confirmação e idempotência | Validada e enviada |
 | 8 | Ledger imutável, wallet e regras de taxas | Validada e enviada |
-| 9 | Fulfillment e entitlements | Pendente |
-| 10 | Arquivos protegidos e external link | Pendente |
+| 9 | Fulfillment e entitlements | Núcleo validado com o primeiro fluxo `EXTERNAL_LINK` |
+| 10 | Arquivos protegidos e external link | `EXTERNAL_LINK` validado; arquivos protegidos pendentes |
 | 11 | Telegram | Após primeiro fluxo completo |
 | 12 | Área de membros | Pendente |
 | 13 | Assinaturas e expiração de acesso | Pendente |
