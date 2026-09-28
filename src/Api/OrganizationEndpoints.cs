@@ -16,6 +16,7 @@ public static class OrganizationEndpoints
         }));
         group.MapGet("/{id:guid}", (Guid id, OrganizationService service, ClaimsPrincipal user, CancellationToken ct) => Execute(async () => Results.Ok(await service.Get(id, UserId(user), ct))));
         group.MapPatch("/{id:guid}", (Guid id, OrganizationRequest input, OrganizationService service, ClaimsPrincipal user, CancellationToken ct) => Execute(async () => Results.Ok(await service.Rename(id, UserId(user), input, ct))));
+        group.MapPut("/{id:guid}/payment-account", (Guid id, PaymentAccountRequest input, OrganizationService service, ClaimsPrincipal user, CancellationToken ct) => Execute(async () => Results.Ok(await service.ConnectPaymentAccount(id, UserId(user), input, ct))));
         group.MapGet("/{id:guid}/members", (Guid id, int? page, int? pageSize, OrganizationService service, ClaimsPrincipal user, CancellationToken ct) => Execute(async () => Results.Ok(await service.Members(id, UserId(user), page ?? 1, pageSize ?? 20, ct))));
         group.MapPost("/{id:guid}/members", (Guid id, AddMemberRequest input, OrganizationService service, ClaimsPrincipal user, CancellationToken ct) => Execute(async () =>
         {

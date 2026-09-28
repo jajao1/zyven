@@ -10,6 +10,17 @@ x-app-environment: &app-environment
   ASPNETCORE_ENVIRONMENT: Development
   DOTNET_ENVIRONMENT: Development
   ReverseProxy__KnownProxies__0: ${DOCKER_PROXY_IP:-172.30.0.10}
+  Payments__Fees__PlatformFixedFee: ${ZYVEN_PLATFORM_FEE:-0.50}
+  Payments__Fees__ProviderFixedFee: ${CELCOIN_TRANSACTION_FEE:-0.00}
+  Payments__Celcoin__Enabled: ${CELCOIN_ENABLED:-false}
+  Payments__Celcoin__BaseUrl: ${CELCOIN_BASE_URL:-https://sandbox.openfinance.celcoin.dev}
+  Payments__Celcoin__ClientId: ${CELCOIN_CLIENT_ID:-}
+  Payments__Celcoin__ClientSecret: ${CELCOIN_CLIENT_SECRET:-}
+  Payments__Celcoin__PlatformAccount: ${CELCOIN_PLATFORM_ACCOUNT:-}
+  Payments__Celcoin__WebhookUsername: ${CELCOIN_WEBHOOK_USERNAME:-}
+  Payments__Celcoin__WebhookPassword: ${CELCOIN_WEBHOOK_PASSWORD:-}
+  Payments__Celcoin__CertificatePath: ${CELCOIN_MTLS_CERTIFICATE_PATH:-}
+  Payments__Celcoin__CertificatePassword: ${CELCOIN_MTLS_CERTIFICATE_PASSWORD:-}
 
 services:
   postgres:

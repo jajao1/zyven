@@ -3,6 +3,7 @@ using System.Net;
 using Microsoft.AspNetCore.HttpOverrides;
 using System.Security.Claims;
 using System.Text;
+using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -32,9 +33,25 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis") ?? throw new InvalidOperationException("ConnectionStrings:Redis is required.")));
 builder.Services.Configure<PasswordHasherOptions>(o => o.IterationCount = 210000);
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
-builder.Services.AddSingleton<IPaymentProcessor, UnconfiguredPaymentProcessor>();
+builder.Services.AddOptions<PaymentFeeOptions>()
+    .Bind(builder.Configuration.GetSection(PaymentFeeOptions.SectionName))
+    .Validate(x => x.PlatformFixedFee >= 0 && decimal.Truncate(x.PlatformFixedFee * 100) == x.PlatformFixedFee * 100, "Payments:Fees:PlatformFixedFee must be a non-negative BRL amount with at most two decimal places.")
+    .Validate(x => x.ProviderFixedFee >= 0 && decimal.Truncate(x.ProviderFixedFee * 100) == x.ProviderFixedFee * 100, "Payments:Fees:ProviderFixedFee must be a non-negative BRL amount with at most two decimal places.")
+    .ValidateOnStart();
+builder.Services.AddSingleton<PaymentFeePolicy>();
+builder.Services.AddOptions<CelcoinOptions>().Bind(builder.Configuration.GetSection(CelcoinOptions.SectionName)).Validate(o => !o.Enabled || (Uri.TryCreate(o.BaseUrl, UriKind.Absolute, out var uri) && uri.Scheme == "https" && !string.IsNullOrWhiteSpace(o.ClientId) && !string.IsNullOrWhiteSpace(o.ClientSecret) && !string.IsNullOrWhiteSpace(o.PlatformAccount) && !string.IsNullOrWhiteSpace(o.WebhookUsername) && !string.IsNullOrWhiteSpace(o.WebhookPassword) && o.MaxSplitPercent is > 0 and <= 100 && (!uri.Host.Equals("api.openfinance.celcoin.com.br", StringComparison.OrdinalIgnoreCase) || !string.IsNullOrWhiteSpace(o.CertificatePath))), "Enabled Celcoin integration requires HTTPS URL, credentials, platform account, webhook credentials, valid split limit and production mTLS certificate.").ValidateOnStart();
+if (builder.Configuration.GetValue<bool>("Payments:Celcoin:Enabled"))
+{
+    builder.Services.AddHttpClient<IPaymentProcessor, CelcoinPaymentProcessor>((services, client) => { var value = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<CelcoinOptions>>().Value; client.BaseAddress = new(value.BaseUrl); client.Timeout = TimeSpan.FromSeconds(20); })
+        .ConfigurePrimaryHttpMessageHandler(services => { var value = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<CelcoinOptions>>().Value; var handler = new HttpClientHandler(); if (!string.IsNullOrWhiteSpace(value.CertificatePath)) handler.ClientCertificates.Add(X509CertificateLoader.LoadPkcs12FromFile(value.CertificatePath, value.CertificatePassword)); return handler; });
+}
+else builder.Services.AddSingleton<IPaymentProcessor, UnconfiguredPaymentProcessor>();
 builder.Services.AddScoped<CatalogService>();
 builder.Services.AddScoped<PublicCheckoutService>();
+builder.Services.AddScoped<PixPaymentService>();
+builder.Services.AddScoped<CelcoinWebhookService>();
+builder.Services.AddScoped<LedgerService>();
+builder.Services.AddScoped<FulfillmentService>();
 builder.Services.AddScoped<CustomerService>();
 builder.Services.AddScoped<TenantAuthorization>(); builder.Services.AddScoped<OrganizationService>();
 builder.Services.AddScoped<AuthService>(); builder.Services.AddSingleton<AuthRateGate>();
@@ -160,6 +177,9 @@ app.MapOrganizations();
 app.MapCatalog();
 app.MapPublicCheckout();
 app.MapCustomers();
+app.MapLedger();
+app.MapFulfillment();
+app.MapCelcoinWebhook();
 await app.RunAsync();
 static CookieOptions CookieOptions(bool development) => new() { HttpOnly = true, Secure = !development, SameSite = SameSiteMode.Strict, Path = "/api/auth", IsEssential = true };
 static void SetCookie(HttpContext context, AuthGrant grant, bool development) { var options = CookieOptions(development); options.Expires = grant.ExpiresAt; context.Response.Cookies.Append("zyven_refresh", grant.RefreshToken, options); }

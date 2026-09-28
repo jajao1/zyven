@@ -7,10 +7,28 @@ using Npgsql;
 using Zyven.Application;
 using Zyven.Domain;
 using Zyven.Infrastructure;
+using System.Net;
+using System.Net.Http.Json;
 namespace IntegrationTests;
 
 public class PaymentFoundationTests
 {
+    [Fact]
+    public async Task Owner_connects_the_organization_to_a_celcoin_baas_account()
+    {
+        await using var app = new WebApplicationFactory<Program>();
+        var fixture = await PublicCheckoutTests.Fixture(app); using var client = fixture.Client;
+
+        var response = await client.PutAsJsonAsync($"/api/organizations/{fixture.Org}/payment-account", new { providerRecipientId = $"seller-{Guid.NewGuid():N}", pixKey = "seller@example.test", merchantName = "PUBLIC STUDIO", merchantCity = "SAO PAULO", merchantPostalCode = "01001000" });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var scope = app.Services.CreateScope();
+        var merchant = await scope.ServiceProvider.GetRequiredService<ZyvenDbContext>().MerchantAccounts.SingleAsync(x => x.OrganizationId == fixture.Org);
+        Assert.Equal("ACTIVE", merchant.Status);
+        Assert.StartsWith("seller-", merchant.ProviderRecipientId);
+        Assert.Equal("seller@example.test", merchant.PixKey);
+    }
+
     [Fact]
     public async Task Organization_creation_provisions_pending_merchant_and_runtime_cannot_charge()
     {
@@ -66,14 +84,15 @@ public class PaymentFoundationTests
             await Rejected($"UPDATE \"Payments\" SET \"Status\" = {"UNKNOWN"} WHERE \"Id\" = {payment.Id}", PostgresErrorCodes.CheckViolation);
             await Rejected($"UPDATE \"MerchantAccounts\" SET \"Status\" = {"APPROVED"} WHERE \"Id\" = {merchant.Id}", PostgresErrorCodes.CheckViolation);
             await Rejected($"INSERT INTO \"MerchantAccounts\" (\"Id\", \"OrganizationId\", \"Status\", \"CreatedAt\", \"UpdatedAt\") VALUES ({Guid.NewGuid()}, {org.Id}, 'PENDING', {now}, {now})", PostgresErrorCodes.UniqueViolation);
-            var retry = Payment.Prepare(checkout, merchant, 1.25m, now); db.Set<Payment>().Add(retry); await db.SaveChangesAsync();
+            var checkout2 = new CheckoutSession { OrganizationId = org.Id, CustomerId = customer2.Id, OfferId = offer.Id, Price = 10, Currency = "BRL", CreatedAt = now, ExpiresAt = now.AddMinutes(30) }; db.Checkouts.Add(checkout2); await db.SaveChangesAsync();
+            var retry = Payment.Prepare(checkout2, merchant, 1.25m, now); db.Set<Payment>().Add(retry); await db.SaveChangesAsync();
             await Rejected($"UPDATE \"Payments\" SET \"ExternalReference\" = {payment.ExternalReference} WHERE \"Id\" = {retry.Id}", PostgresErrorCodes.UniqueViolation);
             await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE \"Payments\" SET \"Provider\" = 'sandbox-a', \"ProviderTransactionId\" = 'same-id' WHERE \"Id\" = {payment.Id}");
             await Rejected($"UPDATE \"Payments\" SET \"Provider\" = 'sandbox-a', \"ProviderTransactionId\" = 'same-id' WHERE \"Id\" = {retry.Id}", PostgresErrorCodes.UniqueViolation);
             await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE \"Payments\" SET \"Provider\" = 'sandbox-b', \"ProviderTransactionId\" = 'same-id' WHERE \"Id\" = {retry.Id}");
             // Exercise custom constraint teardown/recreation only in this test's disposable database.
             db.ChangeTracker.Clear(); await db.GetService<IMigrator>().MigrateAsync("20260927184003_Customers"); await db.Database.MigrateAsync();
-            Assert.Equal(1, await db.Checkouts.CountAsync()); Assert.Equal(2, await db.Set<MerchantAccount>().CountAsync());
+            Assert.Equal(2, await db.Checkouts.CountAsync()); Assert.Equal(2, await db.Set<MerchantAccount>().CountAsync());
         }
         finally
         {

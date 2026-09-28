@@ -37,7 +37,7 @@ O Compose é um ambiente de **Development**. Em produção, configurar TLS no pr
 
 `src/Domain` contém entidades; `src/Application`, contratos e validação; `src/Infrastructure`, persistência e serviços; `src/Api`, HTTP; `src/Workers`, processamento Hangfire. `web` usa React, TypeScript, Vite, Tailwind, componentes shadcn/ui, TanStack Query, React Hook Form e Zod. Recharts está disponível para a fase de dashboard.
 
-O núcleo comercial segue **Product → Offer → Checkout → Payment → Entitlement → Fulfillment**. Organizações e isolamento estão implementados; veja [`docs/organizations.md`](docs/organizations.md) para endpoints e permissões. Nenhum identificador de organização enviado pelo cliente deve conferir acesso por si só. Cobranças reais, ledger, saldo, saques e entregas permanecem pendentes.
+O núcleo comercial segue **Product → Offer → Checkout → Payment → Entitlement → Fulfillment**. O primeiro fluxo completo está implementado com cobrança PIX Celcoin, confirmação por webhook, ledger, entitlement e entrega `EXTERNAL_LINK`. Veja [`docs/organizations.md`](docs/organizations.md) para endpoints e permissões. Nenhum identificador de organização enviado pelo cliente confere acesso por si só. A ativação do provedor exige credenciais Celcoin; arquivos protegidos, integrações adicionais e saques permanecem pendentes.
 
 ## Autenticação
 
@@ -88,12 +88,12 @@ Para desenvolver o frontend com a API do Compose: `cd web`, `npm ci`, `npm run d
 
 ## Evolução
 
-As fases seguintes acrescentam pagamentos e confirmação idempotente, ledger e entrega. O primeiro fluxo completo deve terminar em `EXTERNAL_LINK` com pagamento confirmado no servidor. Telegram e Discord permanecem integrações. A fonte financeira será o ledger imutável, nunca um saldo editável. APIs e credenciais financeiras reais serão configuradas na fase correspondente; dados simulados não serão tratados como dinheiro real.
+O primeiro fluxo completo termina em `EXTERNAL_LINK` após pagamento confirmado no servidor. Telegram, Discord e arquivos protegidos permanecem expansões. A fonte financeira é o ledger imutável, nunca um saldo editável.
 
 Catálogo e smoke específico: [docs/catalog.md](docs/catalog.md). Estado e dependências: [docs/implementation-status.md](docs/implementation-status.md).
 
-Página pública e checkout: [docs/public-checkout.md](docs/public-checkout.md). A etapa de pagamento ainda não está disponível; criar checkout não confirma compra nem produz cobrança.
+Página pública e checkout: [docs/public-checkout.md](docs/public-checkout.md). Pagamento PIX e webhook: [docs/celcoin-integration.md](docs/celcoin-integration.md). Ledger e wallet: [docs/ledger.md](docs/ledger.md). Entitlements e entrega: [docs/fulfillment.md](docs/fulfillment.md).
 
 Clientes, normalização e proteção de perfil: [docs/customers.md](docs/customers.md). `./scripts/smoke-customers.ps1` verifica deduplicação, isolamento e privacidade no ambiente local.
 
-A preparação da fase 6 inclui MerchantAccount pendente, entidades e contratos de pagamento e restrições financeiras/tenant no banco. O processador registrado retorna indisponível; nenhum pagamento é criado pelo checkout. A fase 6 **não está concluída**: falta definir o PSP/banco, integrar sua API e validar a cobrança real em sandbox. Escopo e dependências: [docs/payment-foundation.md](docs/payment-foundation.md). Smoke local dessa preparação: `./scripts/smoke-payment-foundation.ps1`.
+A base de pagamentos inclui MerchantAccount, taxas fixas configuráveis, integração PIX Celcoin e restrições financeiras/tenant no banco. Sem credenciais, o processador retorna indisponível de forma segura. Escopo e dependências: [docs/payment-foundation.md](docs/payment-foundation.md). Smoke local: `./scripts/smoke-payment-foundation.ps1`.

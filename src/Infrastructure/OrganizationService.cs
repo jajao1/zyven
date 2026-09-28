@@ -36,6 +36,7 @@ public sealed class OrganizationService(ZyvenDbContext db, TenantAuthorization t
         var org = new Organization { Name = name, CreatedAt = now, UpdatedAt = now };
         db.Organizations.Add(org);
         db.MerchantAccounts.Add(new() { OrganizationId = org.Id, CreatedAt = now, UpdatedAt = now });
+        db.LedgerAccounts.AddRange(LedgerAccount.CreateChart(org.Id, now));
         db.OrganizationMembers.Add(new() { Organization = org, UserId = userId, Role = OrganizationRoles.Owner, CreatedAt = now });
         Audit(org.Id, userId, org.Id, "organization.created");
         // SaveChanges wraps the organization, pending merchant, owner membership and audit in one transaction.
@@ -53,6 +54,22 @@ public sealed class OrganizationService(ZyvenDbContext db, TenantAuthorization t
         Audit(id, userId, id, "organization.renamed");
         await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
         return Response(org, actor.Role);
+    }
+
+    public async Task<PaymentAccountResponse> ConnectPaymentAccount(Guid id, Guid userId, PaymentAccountRequest request, CancellationToken ct)
+    {
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        await Lock(id, ct);
+        var actor = await tenants.RequireMembership(id, userId, ct);
+        if (actor.Role is not (OrganizationRoles.Owner or OrganizationRoles.Admin)) throw Forbidden();
+        var merchant = await db.MerchantAccounts.SingleAsync(x => x.OrganizationId == id, ct);
+        try { merchant.Activate(request.ProviderRecipientId ?? "", time.GetUtcNow(), request.PixKey ?? "", request.MerchantName ?? "", request.MerchantCity ?? "", request.MerchantPostalCode ?? ""); }
+        catch (ArgumentException) { throw new OrganizationException(400, "Informe conta, chave PIX, nome, cidade e CEP válidos da conta BaaS Celcoin."); }
+        Audit(id, userId, merchant.Id, "payment_account.connected");
+        try { await db.SaveChangesAsync(ct); }
+        catch (DbUpdateException) { throw new OrganizationException(409, "Esta conta Celcoin já está vinculada a outra organização."); }
+        await transaction.CommitAsync(ct);
+        return new(merchant.Status, merchant.ProviderRecipientId, merchant.PixKey, merchant.MerchantName, merchant.MerchantCity, merchant.MerchantPostalCode);
     }
 
     public async Task<PageResponse<MemberResponse>> Members(Guid id, Guid userId, int page, int pageSize, CancellationToken ct)

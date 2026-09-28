@@ -143,6 +143,7 @@ h1 { font-size: clamp(29px, 2.6vw, 40px); font-weight: 550; line-height: 1.15; l
 .public-checkout .catalog-form { margin: 0; gap: 14px; }.public-checkout .field { margin: 0; }.public-checkout .section-copy { margin: 0 0 12px; }
 .checkout-total { border-top: 1px solid #d4d4d8; padding-top: 22px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }.checkout-total strong { font-size: 22px; }
 .checkout-receipt p { line-height: 1.7; }.public-footer { border-top: 1px solid #d4d4d8; padding: 24px 0; color: #71717a; font-size: 12px; }
+.pix-qr { display: block; width: min(240px, 100%); height: auto; margin: 20px auto; background: white; padding: 10px; }.pix-code { display: block; overflow-wrap: anywhere; padding: 12px; margin: 12px 0; background: #f4f4f5; border-radius: 6px; font-size: 11px; }
 @media (max-width: 800px) { .public-grid { grid-template-columns: 1fr; gap: 36px; padding: 36px 0; }.public-shell { padding: 0 20px; } }
 .page-editor-section { border-top: 1px solid #d4d4d8; margin-top: 36px; padding-top: 20px; }.page-editor-section a { font-size: 14px; color: #002fa7; align-self: center; text-decoration: underline; }
 .page-editor fieldset { border-top: 1px solid #d4d4d8; padding: 16px 0; min-width: 0; }.page-editor legend { font-size: 16px; font-weight: 550; padding-right: 12px; }.page-block { display: grid; gap: 10px; margin: 16px 0 24px; padding: 18px; background: #f7f7f8; }.page-block input[type=checkbox] { width: auto; margin-right: 8px; }
