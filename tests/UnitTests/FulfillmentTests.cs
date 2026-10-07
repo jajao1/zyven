@@ -27,6 +27,6 @@ public class FulfillmentTests
     {
         var merchant = new MerchantAccount { OrganizationId = org, Status = "ACTIVE" };
         var checkout = new CheckoutSession { OrganizationId = org, CustomerId = customer, OfferId = offer, Price = 10, Currency = "BRL", ExpiresAt = now.AddMinutes(10) };
-        var payment = Payment.Prepare(checkout, merchant, .50m, now); payment.BeginProvider(now); payment.AttachPix("CELCOIN", "tx", "identification", "emv", checkout.ExpiresAt, now); payment.ConfirmPaid("E123", 10, now); return payment;
+        var payment = Payment.Prepare(checkout, merchant, .50m, now); payment.BeginProvider(now); payment.AttachPix("PUSHINPAY", "tx", "identification", "emv", checkout.ExpiresAt, now); payment.ConfirmPaid("E123", 10, now); return payment;
     }
 }

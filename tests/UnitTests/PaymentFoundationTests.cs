@@ -86,7 +86,7 @@ public class PaymentFoundationTests
 
         payment.BeginProvider(now);
         Assert.Equal("PROCESSING", payment.Status);
-        payment.AttachPix("CELCOIN", "12345", "txid", "emv", now.AddMinutes(30), now);
+        payment.AttachPix("PUSHINPAY", "12345", "txid", "emv", now.AddMinutes(30), now);
         Assert.Equal("PENDING", payment.Status);
         payment.ConfirmPaid("end-to-end", 19.90m, now.AddMinutes(1));
         Assert.Equal("PAID", payment.Status);

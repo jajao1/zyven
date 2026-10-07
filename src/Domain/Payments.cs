@@ -170,7 +170,7 @@ public sealed class Payment
 public sealed class PaymentWebhookEvent
 {
     public Guid Id { get; set; } = Guid.NewGuid();
-    public string Provider { get; set; } = "CELCOIN";
+    public string Provider { get; set; } = "PUSHINPAY";
     public string ExternalEventId { get; set; } = "";
     public Guid? PaymentId { get; set; }
     public string EventType { get; set; } = "";

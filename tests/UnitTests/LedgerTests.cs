@@ -21,7 +21,7 @@ public class LedgerTests
         var now = DateTimeOffset.UtcNow; var org = Guid.NewGuid();
         var merchant = new MerchantAccount { OrganizationId = org, Status = "ACTIVE" };
         var checkout = new CheckoutSession { OrganizationId = org, CustomerId = Guid.NewGuid(), OfferId = Guid.NewGuid(), Price = gross, Currency = "BRL", ExpiresAt = now.AddMinutes(10) };
-        var payment = Payment.Prepare(checkout, merchant, platform, now, provider); payment.BeginProvider(now); payment.AttachPix("CELCOIN", "tx", "identification", "emv", checkout.ExpiresAt, now); payment.ConfirmPaid("E123", gross, now);
+        var payment = Payment.Prepare(checkout, merchant, platform, now, provider); payment.BeginProvider(now); payment.AttachPix("PUSHINPAY", "tx", "identification", "emv", checkout.ExpiresAt, now); payment.ConfirmPaid("E123", gross, now);
         var accounts = LedgerAccount.CreateChart(org, now).ToDictionary(x => x.Code);
 
         var transaction = LedgerTransaction.Capture(payment, accounts, now);
