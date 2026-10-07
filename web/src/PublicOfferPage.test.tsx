@@ -33,6 +33,7 @@ it('creates and displays a PIX charge after checkout', async () => {
   await screen.findByRole('heading', { name: 'Seus dados' }); fireEvent.change(screen.getByLabelText('Nome completo'), { target: { value: 'Buyer Name' } }); fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'buyer@example.test' } }); fireEvent.change(screen.getByLabelText('CPF ou CNPJ'), { target: { value: '12345678909' } }); fireEvent.click(screen.getByRole('button', { name: 'Continuar' }))
   fireEvent.click(await screen.findByRole('button', { name: 'Gerar PIX' }))
   expect(await screen.findByText('000201PIX')).toBeInTheDocument(); expect(await screen.findByAltText('QR Code PIX')).toBeInTheDocument()
+  expect(screen.getByText(/A PushinPay atua exclusivamente como processadora/)).toBeInTheDocument()
 })
 it('does not show a receipt belonging to another offer', async () => {
   window.history.replaceState(null, '', '/o/second?checkout=first-checkout')

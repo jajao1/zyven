@@ -13,6 +13,7 @@ function open(list = [first, second]) {
     if (path.startsWith('/api/organizations?') || path === '/api/organizations') return new Response(JSON.stringify(init?.method === 'POST' ? { ...first, id: 'c', name: 'Novo espaço' } : { items: list, total: list.length, page: 1, pageSize: 20 }))
     if (/\/(products|offers|customers)\?/.test(path)) return new Response(JSON.stringify({ items: [], total: 0, page: 1, pageSize: 20 }))
     if (path.includes('/members?')) return new Response(JSON.stringify({ items: [{ id: path.includes('/a/') ? 'ma' : 'mb', userId: 'u1', email: user.email, displayName: path.includes('/a/') ? 'Equipe A' : 'Equipe B', role: path.includes('/a/') ? 'OWNER' : 'SUPPORT', createdAt: '' }], total: 1, page: 1, pageSize: 20 }))
+    if (path.endsWith('/payment-account')) return new Response(JSON.stringify({ status: 'ACTIVE', provider: 'PUSHINPAY', tokenFingerprint: 'ABCDEF123456' }))
     return new Response(JSON.stringify(list.find(item => path.endsWith('/' + item.id)) ?? first))
   })
   vi.stubGlobal('fetch', fetch)
@@ -56,4 +57,15 @@ it('keeps support members read-only', async () => {
   fireEvent.click(await screen.findByRole('button', { name: /Equipe/ }))
   expect(await screen.findByText('Equipe B')).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Adicionar membro' })).not.toBeInTheDocument()
+})
+
+it('connects PushinPay without retaining the submitted token', async () => {
+  const { fetch } = open([first])
+  fireEvent.click(await screen.findByRole('button', { name: /Studio A/ }))
+  fireEvent.click(await screen.findByRole('button', { name: /Configurações/ }))
+  fireEvent.change(await screen.findByLabelText('Token PushinPay'), { target: { value: 'seller-secret' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Conectar PushinPay' }))
+  expect(await screen.findByText(/PushinPay conectada/)).toBeInTheDocument()
+  expect(screen.queryByDisplayValue('seller-secret')).not.toBeInTheDocument()
+  expect(fetch).toHaveBeenCalledWith('/api/organizations/a/payment-account', expect.objectContaining({ method: 'PUT', body: JSON.stringify({ token: 'seller-secret' }) }))
 })

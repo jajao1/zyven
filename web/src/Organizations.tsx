@@ -3,6 +3,9 @@ import { Customers } from './Customers'
 import { WorkspaceOverview } from './WorkspaceOverview'
 import { useCatalogLocation, navigateWorkspace, type WorkspaceView } from './lib/catalog-navigation'
 import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Building2, LayoutGrid, Package, Plus, Settings, ShoppingBag, Users } from 'lucide-react'
 import { ApiError } from './lib/auth-client'
@@ -33,8 +36,10 @@ function Team({ id, userId, actor }: { id: string; userId: string; actor: Role }
 }
 
 function OrganizationSettings({ id, userId, organization }: { id: string; userId: string; organization: { name: string; role: Role } }) {
-  const client = useQueryClient(); const [name, setName] = useState(organization.name); const canManage = organization.role === 'OWNER' || organization.role === 'ADMIN'; const rename = useMutation({ mutationFn: () => api.rename(id, name.trim()), onSuccess: async () => { await client.invalidateQueries({ queryKey: ['organizations', userId] }) } })
-  return <section><div className="overview-heading"><div><p className="eyebrow">Organização</p><h1>Configurações</h1><p>Dados gerais e seu nível de acesso.</p></div><span className="overview-folio">06</span></div><div className="settings-grid"><form onSubmit={event => { event.preventDefault(); rename.mutate() }}><div className="field"><Label htmlFor="org-name">Nome da organização</Label><Input id="org-name" value={name} maxLength={100} disabled={!canManage} onChange={event => setName(event.target.value)} /></div>{canManage && <Button disabled={rename.isPending || !name.trim()}>Salvar alterações</Button>}</form><dl><dt>Seu papel</dt><dd>{roleNames[organization.role]}</dd></dl></div><ErrorNotice error={rename.error} /></section>
+  const client = useQueryClient(); const [name, setName] = useState(organization.name); const [account, setAccount] = useState<{ status: string; provider: string; tokenFingerprint: string } | null>(null); const canManage = organization.role === 'OWNER' || organization.role === 'ADMIN'; const rename = useMutation({ mutationFn: () => api.rename(id, name.trim()), onSuccess: async () => { await client.invalidateQueries({ queryKey: ['organizations', userId] }) } })
+  const tokenForm = useForm<{ token: string }>({ resolver: zodResolver(z.object({ token: z.string().trim().min(8, 'Informe um token válido.').max(4096) })), defaultValues: { token: '' } })
+  const connect = useMutation({ mutationFn: ({ token }: { token: string }) => api.connectPayment(id, token.trim()), onSuccess: result => { setAccount(result); tokenForm.reset() } })
+  return <section><div className="overview-heading"><div><p className="eyebrow">Organização</p><h1>Configurações</h1><p>Dados gerais e seu nível de acesso.</p></div><span className="overview-folio">06</span></div><div className="settings-grid"><form onSubmit={event => { event.preventDefault(); rename.mutate() }}><div className="field"><Label htmlFor="org-name">Nome da organização</Label><Input id="org-name" value={name} maxLength={100} disabled={!canManage} onChange={event => setName(event.target.value)} /></div>{canManage && <Button disabled={rename.isPending || !name.trim()}>Salvar alterações</Button>}</form><dl><dt>Seu papel</dt><dd>{roleNames[organization.role]}</dd></dl>{canManage && <form onSubmit={tokenForm.handleSubmit(value => connect.mutate(value))}><h2>Pagamentos</h2><div className="field"><Label htmlFor="pushinpay-token">Token PushinPay</Label><Input id="pushinpay-token" type="password" autoComplete="off" {...tokenForm.register('token')} /><p className="field-help">O token é criptografado e não poderá ser visualizado depois.</p>{tokenForm.formState.errors.token && <p role="alert">{tokenForm.formState.errors.token.message}</p>}</div><Button disabled={connect.isPending}>Conectar PushinPay</Button>{account && <p>PushinPay conectada · token final {account.tokenFingerprint}</p>}<ErrorNotice error={connect.error} /></form>}</div><ErrorNotice error={rename.error} /></section>
 }
 
 function Workspace({ id, userId, organizations, onLostAccess }: { id: string; userId: string; organizations: Array<{ id: string; name: string; role: Role }>; onLostAccess: () => void }) {
