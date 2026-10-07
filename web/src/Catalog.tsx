@@ -11,6 +11,7 @@ import { ApiError } from './lib/auth-client'
 import { catalogClient as api, statusNames, type Product, type Offer, type ProductInput, type OfferInput } from './lib/catalog-client'
 import { navigateCatalog, useCatalogLocation } from './lib/catalog-navigation'
 import type { Role } from './lib/organization-client'
+import { Box, CircleCheck, Plus, Search, ShoppingBag } from 'lucide-react'
 function ErrorNotice({ error }: { error: Error | null }) { return error ? <p role="alert" className="error-notice">{error instanceof ApiError ? error.message : 'Não foi possível conectar. Tente novamente.'}</p> : null }
 function StatusOptions() { return Object.entries(statusNames).map(([key, label]) => <option key={key} value={key}>{label}</option>) }
 type EditorDone = (isCurrent: () => boolean) => Promise<void>
@@ -74,20 +75,28 @@ export function Catalog({ org, userId, role }: { org: string; userId: string; ro
   const kind = location.kind ?? 'products'
   const item = location.org === org ? location.item : undefined
   const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const [status, setStatus] = useState('ALL')
   const client = useQueryClient()
   const canWrite = ['OWNER', 'ADMIN', 'OPERATOR'].includes(role)
   const products = useQuery({ queryKey: ['organizations', userId, org, 'products', 'list', page], queryFn: () => api.products(org, page), enabled: kind === 'products' && !item })
   const offers = useQuery({ queryKey: ['organizations', userId, org, 'offers', 'list', page], queryFn: () => api.offers(org, page), enabled: kind === 'offers' && !item })
   const list = kind === 'products' ? products : offers
+  const visibleItems = list.data?.items.filter(entity => (status === 'ALL' || entity.status === status) && (!search.trim() || entity.name.toLocaleLowerCase('pt-BR').includes(search.trim().toLocaleLowerCase('pt-BR')) || entity.slug.toLocaleLowerCase('pt-BR').includes(search.trim().toLocaleLowerCase('pt-BR')))) ?? []
+  const activeOnPage = list.data?.items.filter(entity => entity.status === 'ACTIVE').length ?? 0
   async function done(isCurrent: () => boolean) { await client.invalidateQueries({ queryKey: ['organizations', userId, org] }); if (isCurrent()) navigateCatalog(`/${kind}`, org) }
-  return <section className="catalog" aria-label="Catálogo"><div className="section-heading"><div><p className="eyebrow">O que você vende</p><h2>Catálogo</h2></div></div>
-    <nav className="catalog-tabs" aria-label="Catálogo"><Button variant={kind === 'products' ? 'default' : 'outline'} onClick={() => { setPage(1); navigateCatalog('/products', org) }}>Produtos</Button><Button variant={kind === 'offers' ? 'default' : 'outline'} onClick={() => { setPage(1); navigateCatalog('/offers', org) }}>Ofertas</Button></nav>
-    <p className="section-copy">{kind === 'products' ? 'Organize seus produtos. Cada produto pode ter várias ofertas.' : 'Defina o preço e as condições de cada oferta.'}</p>
+  const noun = kind === 'products' ? 'produto' : 'oferta'
+  return <section className="catalog catalog-management" aria-label={kind === 'products' ? 'Produtos' : 'Ofertas'}>
+    <header className="catalog-heading"><div><p className="catalog-context">O que você vende</p><h1>{kind === 'products' ? 'Produtos' : 'Ofertas'}</h1><p>{kind === 'products' ? 'Organize o conteúdo ou serviço entregue ao comprador. Um produto pode ser vendido por diferentes ofertas.' : 'Configure preço, cobrança e checkout. Cada oferta vende um produto em condições específicas.'}</p></div>
+      <nav className="catalog-tabs" aria-label="Seções de vendas"><Button variant={kind === 'products' ? 'default' : 'ghost'} onClick={() => { setPage(1); setSearch(''); setStatus('ALL'); navigateCatalog('/products', org) }}><Box />Produtos</Button><Button variant={kind === 'offers' ? 'default' : 'ghost'} onClick={() => { setPage(1); setSearch(''); setStatus('ALL'); navigateCatalog('/offers', org) }}><ShoppingBag />Ofertas</Button></nav>
+    </header>
     {item ? <><Button variant="ghost" onClick={() => navigateCatalog(`/${kind}`, org)}>Voltar à lista</Button><CatalogDetail key={`${userId}-${org}-${kind}-${item}-${role}`} org={org} userId={userId} kind={kind} id={item} canWrite={canWrite} done={done} /></> : <>
-      {canWrite && <Button onClick={() => navigateCatalog(`/${kind}/new`, org)}>{kind === 'products' ? 'Novo produto' : 'Nova oferta'}</Button>}
       {list.isPending ? <p role="status">Carregando catálogo...</p> : list.error ? <><ErrorNotice error={list.error} /><Button variant="outline" onClick={() => void list.refetch()}>Tentar novamente</Button></> : <>
+        <div className="catalog-metrics"><article><span>Total de {kind === 'products' ? 'produtos' : 'ofertas'}</span><strong>{list.data?.total ?? 0}</strong><small>{list.data?.total === 1 ? '1 item registrado' : `${list.data?.total ?? 0} itens registrados`}</small></article><article><span>Ativos nesta página</span><strong>{activeOnPage}</strong><small><CircleCheck />Prontos para uso</small></article><article><span>{kind === 'products' ? 'Como são vendidos' : 'O que configuram'}</span><strong className="catalog-concept">{kind === 'products' ? 'Ofertas' : 'Checkout'}</strong><small>{kind === 'products' ? 'Preço e checkout ficam nas ofertas' : 'Preço e regras de cobrança'}</small></article></div>
+        <div className="catalog-toolbar"><div className="catalog-search"><Search /><Input aria-label={`Buscar ${kind === 'products' ? 'produtos' : 'ofertas'}`} placeholder={`Buscar ${kind === 'products' ? 'produtos' : 'ofertas'} por nome ou identificador`} value={search} onChange={event => setSearch(event.target.value)} /></div><select aria-label="Filtrar por status" value={status} onChange={event => setStatus(event.target.value)}><option value="ALL">Todos os status</option><StatusOptions /></select>{canWrite && <Button onClick={() => navigateCatalog(`/${kind}/new`, org)}><Plus />{kind === 'products' ? 'Novo produto' : 'Nova oferta'}</Button>}</div>
         {!list.data?.items.length && <p className="catalog-empty">{kind === 'products' ? 'Seu catálogo começa com um produto.' : 'Crie uma oferta para um produto do catálogo.'}</p>}
-        <ul className="catalog-list">{list.data?.items.map(entity => <li key={entity.id}><div><strong>{entity.name}</strong><span>{entity.slug}</span>{'price' in entity && <span>{entity.currency} {entity.price} · {entity.billingType === 'ONE_TIME' ? 'Pagamento único' : 'Assinatura'}</span>}</div><span className="role-badge">{statusNames[entity.status]}</span><Button variant="outline" onClick={() => navigateCatalog(`/${kind}/${entity.id}`, org)}>{canWrite ? 'Editar' : 'Consultar'}</Button></li>)}</ul>
+        {!!list.data?.items.length && !visibleItems.length && <p className="catalog-empty">Nenhum {noun} corresponde aos filtros.</p>}
+        <div className="catalog-table" role="table" aria-label={kind === 'products' ? 'Produtos cadastrados' : 'Ofertas cadastradas'}>{visibleItems.map(entity => <article role="row" key={entity.id}><div className="catalog-entity"><span><Box /></span><div><strong>{entity.name}</strong><small>{'price' in entity ? `${entity.currency} ${entity.price} · ${entity.billingType === 'ONE_TIME' ? 'Pagamento único' : 'Assinatura'}` : entity.description || 'Sem descrição'}</small></div></div><code>{entity.slug}</code><span className={`catalog-status ${entity.status.toLocaleLowerCase()}`}><i />{statusNames[entity.status]}</span><Button variant="outline" onClick={() => navigateCatalog(`/${kind}/${entity.id}`, org)}>{canWrite ? 'Editar' : 'Consultar'}</Button></article>)}</div>
         {list.data && list.data.total > 20 && <div className="pagination"><Button variant="outline" disabled={page === 1} onClick={() => setPage(page - 1)}>Anterior</Button><span>Página {page}</span><Button variant="outline" disabled={page * 20 >= list.data.total} onClick={() => setPage(page + 1)}>Próxima</Button></div>}
       </>}
     </>}
