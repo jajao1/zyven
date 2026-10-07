@@ -63,6 +63,7 @@ it('connects PushinPay without retaining the submitted token', async () => {
   const { fetch } = open([first])
   fireEvent.click(await screen.findByRole('button', { name: /Studio A/ }))
   fireEvent.click(await screen.findByRole('button', { name: /Configurações/ }))
+  fireEvent.click(await screen.findByRole('button', { name: /Pagamentos e gateway/ }))
   fireEvent.change(await screen.findByLabelText('Token PushinPay'), { target: { value: 'seller-secret' } })
   fireEvent.click(screen.getByRole('button', { name: 'Conectar PushinPay' }))
   expect(await screen.findByText(/PushinPay conectada/)).toBeInTheDocument()
