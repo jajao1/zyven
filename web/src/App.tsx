@@ -70,7 +70,8 @@ function AuthForm({ onAuthenticated }: { onAuthenticated: (user: User) => Promis
 
 function Account({ user, onLogout }: { user: User; onLogout: () => Promise<void> }) {
   const logout = useMutation({ mutationFn: () => authClient.logout(), onSuccess: onLogout })
-  return <div className="account-menu"><h1 className="sr-only">Olá, {user.displayName}.</h1><span><strong>{user.displayName}</strong><small>{user.email}</small></span><Button variant="ghost" onClick={() => logout.mutate()} disabled={logout.isPending}><LogOut />{logout.isPending ? 'Saindo...' : 'Sair da conta'}</Button>{logout.error && <span role="alert" className="sr-only">Não foi possível encerrar a sessão.</span>}</div>
+  const initials = user.displayName.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toLocaleUpperCase('pt-BR')
+  return <div className="account-menu"><h1 className="sr-only">Olá, {user.displayName}.</h1><div className="account-identity" aria-hidden="true">{initials}</div><span><strong>{user.displayName}</strong><small>{user.email}</small></span><Button variant="ghost" onClick={() => logout.mutate()} disabled={logout.isPending}><LogOut />{logout.isPending ? 'Saindo...' : 'Sair da conta'}</Button>{logout.error && <span role="alert" className="sr-only">Não foi possível encerrar a sessão.</span>}</div>
 }
 
 export default function App() {
@@ -86,7 +87,7 @@ export default function App() {
     refetchOnWindowFocus: true,
   })
   const clearSession = async () => { await client.cancelQueries({ queryKey: ['session'] }); client.setQueryData(['session'], null); client.removeQueries({ predicate: query => query.queryKey[0] !== 'session' }) }
-  return <div className="app-shell">
+  return <div className={session.data ? 'app-shell is-authenticated' : 'app-shell'}>
     <header className="topbar"><a href="/" className="brand" aria-label="Zyven, início"><span className="brand-symbol"><ArrowUpRight /></span>zyven<span className="brand-dot">.</span></a>{session.data ? <Account user={session.data} onLogout={clearSession} /> : <span className="header-note">Seu conhecimento. Novas possibilidades.</span>}</header>
     <main className={session.data ? "main-grid authenticated-grid" : "main-grid"}>
       {!session.data && <aside className="intro-panel">

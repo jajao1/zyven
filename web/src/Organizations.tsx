@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Building2, LayoutGrid, Package, Plus, Settings, ShoppingBag, Users } from 'lucide-react'
+import { ArrowRight, Building2, Info, LayoutGrid, Package, Plus, Settings, ShoppingBag, Users } from 'lucide-react'
 import { ApiError } from './lib/auth-client'
 import { organizationClient as api, roleNames, type Role, type Member, type Page } from './lib/organization-client'
 import { Button } from './components/ui/button'
@@ -55,5 +55,23 @@ export function Organizations({ userId }: { userId: string }) {
   const create = useMutation({ mutationFn: () => api.create(name.trim()), onSuccess: async organization => { setName(''); setSelected(organization.id); navigateWorkspace('/dashboard', organization.id); await client.invalidateQueries({ queryKey: ['organizations', userId] }) } })
   if (list.isPending) return <p role="status">Carregando organizações...</p>; if (list.error) return <><ErrorNotice error={list.error} /><Button variant="outline" onClick={() => void list.refetch()}>Recarregar organizações</Button></>
   const organizations = list.data?.items ?? []; if (selected && organizations.some(item => item.id === selected)) return <Workspace key={selected} id={selected} userId={userId} organizations={organizations} onLostAccess={() => { setSelected(''); navigateWorkspace('/', ''); void client.invalidateQueries({ queryKey: ['organizations', userId] }) }} />
-  return <section className="organization-entry"><div className="overview-heading"><div><p className="eyebrow">Comece por aqui</p><h1>Organizações</h1><p>Escolha um espaço existente ou crie sua operação.</p></div><span className="overview-folio">00</span></div>{organizations.length > 0 && <div className="organization-list">{organizations.map(item => <button key={item.id} onClick={() => { setSelected(item.id); navigateWorkspace('/dashboard', item.id) }}><Building2 /><span><strong>{item.name}</strong><small>{roleNames[item.role]}</small></span></button>)}</div>}<Pagination data={list.data} page={page} setPage={setPage} /><form className="create-organization" onSubmit={event => { event.preventDefault(); create.mutate() }}><Label htmlFor="new-org">Nova organização</Label><div><Input id="new-org" required maxLength={100} placeholder="Nome da organização" value={name} onChange={event => setName(event.target.value)} /><Button disabled={create.isPending || !name.trim()}><Plus />Criar</Button></div></form><ErrorNotice error={create.error} /></section>
+  return <section className="organization-entry">
+    <div className="organization-heading">
+      <div><p className="entry-kicker"><span />Comece por aqui</p><h1>Organizações</h1><p>Escolha um espaço existente ou crie sua operação para começar a gerenciar seus fluxos.</p></div>
+      <div className="organization-count" aria-label={`${list.data?.total ?? 0} organizações disponíveis`}><strong>{String(list.data?.total ?? 0).padStart(2, '0')}</strong><span>{list.data?.total === 1 ? 'Disponível' : 'Disponíveis'}</span></div>
+    </div>
+    {organizations.length > 0 && <section className="available-organizations" aria-labelledby="available-organizations-title">
+      <div className="organization-section-label"><h2 id="available-organizations-title">Suas organizações <span>{list.data?.total ?? organizations.length}</span></h2><small>Ambiente de produção</small></div>
+      <div className="organization-list">{organizations.map(item => <article className="organization-card" key={item.id}>
+        <div className="organization-card-main"><span className="organization-icon"><Building2 /></span><div><div className="organization-card-title"><h3>{item.name}</h3><span>{roleNames[item.role]}</span><small><i />Ativo</small></div><p>ID: <code>{item.id}</code></p></div></div>
+        <Button className="enter-organization" variant="outline" aria-label={`Entrar no espaço ${item.name}`} onClick={() => { setSelected(item.id); navigateWorkspace('/dashboard', item.id) }}>Entrar no espaço<ArrowRight /></Button>
+      </article>)}</div>
+      <Pagination data={list.data} page={page} setPage={setPage} />
+    </section>}
+    <section className="create-organization-panel">
+      <div className="create-organization-heading"><span><Plus /></span><div><h2 id="create-organization-title">Nova organização</h2><p>Defina um ambiente isolado para seus projetos e sua equipe.</p></div></div>
+      <form className="create-organization" onSubmit={event => { event.preventDefault(); create.mutate() }}><Label htmlFor="new-org">Nome da organização</Label><div><Input id="new-org" aria-label="Nova organização" required maxLength={100} placeholder="Ex: Minha empresa" value={name} onChange={event => setName(event.target.value)} /><Button aria-label="Criar" disabled={create.isPending || !name.trim()}><Plus />{create.isPending ? 'Criando...' : 'Criar organização'}</Button></div><p className="organization-help"><Info />Você poderá convidar membros e configurar permissões após a criação.</p></form>
+      <ErrorNotice error={create.error} />
+    </section>
+  </section>
 }
