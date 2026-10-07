@@ -1,10 +1,10 @@
 # Ledger financeiro
 
-O ledger é a fonte do saldo financeiro da organização. A confirmação idempotente de um PIX Celcoin registra, na mesma transação do banco, um lançamento `PAYMENT_CAPTURED` com partidas dobradas:
+O ledger é a fonte do saldo financeiro da organização. A confirmação idempotente de um PIX PushinPay registra, na mesma transação do banco, um lançamento `PAYMENT_CAPTURED` com partidas dobradas:
 
 | Conta | Débito | Crédito |
 | --- | ---: | ---: |
-| `CELCOIN_CLEARING` | valor bruto | — |
+| `PAYMENT_PROCESSOR_CLEARING` | valor bruto | — |
 | `MERCHANT_AVAILABLE` | — | valor líquido |
 | `PLATFORM_FEE_REVENUE` | — | taxa fixa Zyven |
 | `PROVIDER_FEE_PAYABLE` | — | taxa do provedor |

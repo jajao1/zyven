@@ -87,6 +87,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 131072);
 builder.Services.AddAuthorization(); builder.Services.AddProblemDetails(); builder.Services.AddOpenApi();
 var app = builder.Build();
+_ = app.Services.GetRequiredService<PushinPayCredentialVault>();
 app.UseExceptionHandler();
 app.UseForwardedHeaders();
 app.Use(async (context, next) =>

@@ -17,13 +17,17 @@ O Compose inicia PostgreSQL e Redis, aplica migrations em um processo separado, 
 
 ## Configuração
 
-`scripts/setup.ps1` gera `.env` com segredos aleatórios, preservando um arquivo existente. Nunca versionar `.env`. Em outros sistemas, copie `.env.example` e gere valores aleatórios para suas três chaves. O Compose exige os valores; não contém credenciais padrão de aplicação.
+`scripts/setup.ps1` gera `.env` com segredos aleatórios, incluindo a chave de criptografia dos tokens de pagamento, e preserva valores existentes. Nunca versionar `.env`. Em outros sistemas, copie `.env.example` e gere valores aleatórios. O Compose exige os valores; não contém credenciais padrão de aplicação.
 
 | Variável | Uso |
 | --- | --- |
 | POSTGRES_PASSWORD | Senha local PostgreSQL |
 | REDIS_PASSWORD | Senha local Redis |
 | JWT_SIGNING_KEY | Chave aleatória de assinatura JWT, pelo menos 32 bytes |
+| PAYMENT_CREDENTIAL_ENCRYPTION_KEY | 32 bytes aleatórios em Base64 para cifrar tokens PushinPay |
+| PUSHINPAY_ENABLED / PUSHINPAY_BASE_URL | Ativação e ambiente da PushinPay |
+| PUSHINPAY_PLATFORM_ACCOUNT_ID | Conta Zyven que recebe o split da taxa fixa |
+| PUBLIC_API_BASE_URL | URL HTTPS pública usada nos callbacks |
 | WEB_PORT / API_PORT | Portas locais 8088 / 5080 |
 | POSTGRES_PORT / REDIS_PORT | Portas locais 55432 / 56379 |
 | DOCKER_SUBNET | Rede local padrão 172.30.0.0/24 |
@@ -37,7 +41,7 @@ O Compose é um ambiente de **Development**. Em produção, configurar TLS no pr
 
 `src/Domain` contém entidades; `src/Application`, contratos e validação; `src/Infrastructure`, persistência e serviços; `src/Api`, HTTP; `src/Workers`, processamento Hangfire. `web` usa React, TypeScript, Vite, Tailwind, componentes shadcn/ui, TanStack Query, React Hook Form e Zod. Recharts está disponível para a fase de dashboard.
 
-O núcleo comercial segue **Product → Offer → Checkout → Payment → Entitlement → Fulfillment**. O primeiro fluxo completo está implementado com cobrança PIX Celcoin, confirmação por webhook, ledger, entitlement e entrega `EXTERNAL_LINK`. Veja [`docs/organizations.md`](docs/organizations.md) para endpoints e permissões. Nenhum identificador de organização enviado pelo cliente confere acesso por si só. A ativação do provedor exige credenciais Celcoin; arquivos protegidos, integrações adicionais e saques permanecem pendentes.
+O núcleo comercial segue **Product → Offer → Checkout → Payment → Entitlement → Fulfillment**. O primeiro fluxo completo está implementado com cobrança PIX PushinPay, confirmação verificada por webhook, ledger, entitlement e entrega `EXTERNAL_LINK`. Veja [`docs/organizations.md`](docs/organizations.md) para endpoints e permissões. Nenhum identificador de organização enviado pelo cliente confere acesso por si só. Cada vendedor informa o token da própria conta PushinPay; arquivos protegidos, integrações adicionais e saques permanecem pendentes.
 
 ## Autenticação
 
@@ -92,8 +96,8 @@ O primeiro fluxo completo termina em `EXTERNAL_LINK` após pagamento confirmado 
 
 Catálogo e smoke específico: [docs/catalog.md](docs/catalog.md). Estado e dependências: [docs/implementation-status.md](docs/implementation-status.md).
 
-Página pública e checkout: [docs/public-checkout.md](docs/public-checkout.md). Pagamento PIX e webhook: [docs/celcoin-integration.md](docs/celcoin-integration.md). Ledger e wallet: [docs/ledger.md](docs/ledger.md). Entitlements e entrega: [docs/fulfillment.md](docs/fulfillment.md).
+Página pública e checkout: [docs/public-checkout.md](docs/public-checkout.md). Pagamento PIX e webhook: [docs/pushinpay-integration.md](docs/pushinpay-integration.md). Ledger e wallet: [docs/ledger.md](docs/ledger.md). Entitlements e entrega: [docs/fulfillment.md](docs/fulfillment.md).
 
 Clientes, normalização e proteção de perfil: [docs/customers.md](docs/customers.md). `./scripts/smoke-customers.ps1` verifica deduplicação, isolamento e privacidade no ambiente local.
 
-A base de pagamentos inclui MerchantAccount, taxas fixas configuráveis, integração PIX Celcoin e restrições financeiras/tenant no banco. Sem credenciais, o processador retorna indisponível de forma segura. Escopo e dependências: [docs/payment-foundation.md](docs/payment-foundation.md). Smoke local: `./scripts/smoke-payment-foundation.ps1`.
+A base de pagamentos inclui MerchantAccount, taxas fixas configuráveis, tokens PushinPay cifrados e restrições financeiras/tenant no banco. Sem configuração, o processador retorna indisponível de forma segura. Escopo e dependências: [docs/payment-foundation.md](docs/payment-foundation.md). Smoke local: `./scripts/smoke-payment-foundation.ps1`.

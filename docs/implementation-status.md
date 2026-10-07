@@ -9,7 +9,7 @@ A especificação mestre permanece a autoridade. Este mapa registra a sequência
 | 3 | Produtos e ofertas | Validada e enviada |
 | 4 | Editor simples, página pública e checkout persistente | Validada e enviada |
 | 5 | Clientes e identificação por organização | Validada e enviada |
-| 6 | Payment core, MerchantAccount e cobrança PIX Celcoin | Validada e enviada; ativação real depende das credenciais Celcoin |
+| 6 | Payment core, MerchantAccount e cobrança PIX PushinPay | Validada; ativação real depende da conta e tokens PushinPay |
 | 7 | Webhook autenticado, confirmação e idempotência | Validada e enviada |
 | 8 | Ledger imutável, wallet e regras de taxas | Validada e enviada |
 | 9 | Fulfillment e entitlements | Núcleo validado com o primeiro fluxo `EXTERNAL_LINK` |
