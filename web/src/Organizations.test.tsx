@@ -27,6 +27,7 @@ it('opens a selected organization on the truthful overview and keeps catalog rou
   fireEvent.click(await screen.findByRole('button', { name: /Studio A/ }))
   expect(await screen.findByRole('heading', { name: 'Studio A' })).toBeInTheDocument()
   expect(screen.getByLabelText('Navegação da organização')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /Vendas/ })).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: /Produtos/ }))
   expect(await screen.findByText('Catálogo carregado')).toBeInTheDocument()
   expect(window.location.pathname + window.location.search).toBe('/products?organization=a')
@@ -57,6 +58,7 @@ it('keeps support members read-only', async () => {
   fireEvent.click(await screen.findByRole('button', { name: /Equipe/ }))
   expect(await screen.findByText('Equipe B')).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Adicionar membro' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /Vendas/ })).not.toBeInTheDocument()
 })
 
 it('connects PushinPay without retaining the submitted token', async () => {

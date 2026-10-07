@@ -98,6 +98,8 @@ Catálogo e smoke específico: [docs/catalog.md](docs/catalog.md). Estado e depe
 
 Página pública e checkout: [docs/public-checkout.md](docs/public-checkout.md). Pagamento PIX e webhook: [docs/pushinpay-integration.md](docs/pushinpay-integration.md). Ledger e wallet: [docs/ledger.md](docs/ledger.md). Entitlements e entrega: [docs/fulfillment.md](docs/fulfillment.md).
 
+Painel de vendas, detalhes de pagamento e extrato financeiro: [docs/sales-finance.md](docs/sales-finance.md).
+
 Clientes, normalização e proteção de perfil: [docs/customers.md](docs/customers.md). `./scripts/smoke-customers.ps1` verifica deduplicação, isolamento e privacidade no ambiente local.
 
 A base de pagamentos inclui MerchantAccount, taxas fixas configuráveis, tokens PushinPay cifrados e restrições financeiras/tenant no banco. Sem configuração, o processador retorna indisponível de forma segura. Escopo e dependências: [docs/payment-foundation.md](docs/payment-foundation.md). Smoke local: `./scripts/smoke-payment-foundation.ps1`.

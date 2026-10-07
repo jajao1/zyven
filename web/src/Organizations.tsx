@@ -1,5 +1,6 @@
 import { Catalog } from './Catalog'
 import { Customers } from './Customers'
+import { Sales } from './Sales'
 import { WorkspaceOverview } from './WorkspaceOverview'
 import { useCatalogLocation, navigateWorkspace, type WorkspaceView } from './lib/catalog-navigation'
 import { useState } from 'react'
@@ -7,7 +8,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowRight, Building2, Check, Copy, CreditCard, Info, KeyRound, LayoutGrid, LockKeyhole, Package, Plus, Search, Settings, ShieldCheck, ShoppingBag, UserRoundCheck, Users } from 'lucide-react'
+import { ArrowRight, BadgeDollarSign, Building2, Check, Copy, CreditCard, Info, KeyRound, LayoutGrid, LockKeyhole, Package, Plus, Search, Settings, ShieldCheck, ShoppingBag, UserRoundCheck, Users } from 'lucide-react'
 import { ApiError } from './lib/auth-client'
 import { organizationClient as api, roleNames, type Role, type Member, type Page } from './lib/organization-client'
 import { Button } from './components/ui/button'
@@ -24,8 +25,8 @@ function MemberRow({ member, actor, pending, change, remove }: { member: Member;
   return <li className="member-row"><div className="member-identity"><i>{memberInitials(member.displayName)}</i><div><strong>{member.displayName}</strong><span>{member.email}</span></div></div><div className="member-access"><i /><span>Ativo</span></div>{canManage ? <div className="member-actions"><select aria-label={`Papel de ${member.displayName}`} value={role} onChange={event => setRole(event.target.value as Role)} disabled={pending}><RoleOptions owner={actor === 'OWNER'} /></select><Button variant="outline" disabled={pending || role === member.role} onClick={() => change(role)}>Salvar papel</Button>{confirm ? <><span>Remover acesso?</span><Button variant="outline" disabled={pending} onClick={remove}>Confirmar remoção</Button><Button variant="ghost" disabled={pending} onClick={() => setConfirm(false)}>Cancelar</Button></> : <Button variant="ghost" disabled={pending} onClick={() => setConfirm(true)}>Remover</Button>}</div> : <span className="role-badge">{roleNames[member.role]}</span>}</li>
 }
 
-const destinations: Array<{ view: WorkspaceView; path: string; label: string; icon: typeof LayoutGrid }> = [
-  { view: 'overview', path: '/dashboard', label: 'Visão geral', icon: LayoutGrid }, { view: 'products', path: '/products', label: 'Produtos', icon: Package }, { view: 'offers', path: '/offers', label: 'Ofertas', icon: ShoppingBag }, { view: 'customers', path: '/customers', label: 'Clientes', icon: Users }, { view: 'team', path: '/team', label: 'Equipe', icon: Users }, { view: 'settings', path: '/settings', label: 'Configurações', icon: Settings },
+const destinations: Array<{ view: WorkspaceView; path: string; label: string; icon: typeof LayoutGrid; finance?: boolean }> = [
+  { view: 'overview', path: '/dashboard', label: 'Visão geral', icon: LayoutGrid }, { view: 'products', path: '/products', label: 'Produtos', icon: Package }, { view: 'offers', path: '/offers', label: 'Ofertas', icon: ShoppingBag }, { view: 'customers', path: '/customers', label: 'Clientes', icon: Users }, { view: 'sales', path: '/sales', label: 'Vendas', icon: BadgeDollarSign, finance: true }, { view: 'team', path: '/team', label: 'Equipe', icon: Users }, { view: 'settings', path: '/settings', label: 'Configurações', icon: Settings },
 ]
 
 function Team({ id, userId, actor }: { id: string; userId: string; actor: Role }) {
@@ -62,7 +63,8 @@ function Workspace({ id, userId, organizations, onLostAccess }: { id: string; us
   if (detail.isPending) return <p role="status">Abrindo organização...</p>
   if (detail.error) return <div><ErrorNotice error={detail.error} /><Button variant="outline" onClick={onLostAccess}>Voltar às organizações</Button></div>
   const organization = detail.data!; const view = route.view === 'organizations' ? 'overview' : route.view
-  return <section className="workspace-shell" aria-label={`Organização ${organization.name}`}><aside className="workspace-rail"><div className="rail-organization"><Label htmlFor="active-org">Organização</Label><select id="active-org" value={id} onChange={event => navigateWorkspace('/dashboard', event.target.value)}>{organizations.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select><span>{roleNames[organization.role]}</span></div><nav aria-label="Navegação da organização">{destinations.map((destination, index) => { const Icon = destination.icon; return <button key={destination.view} className={view === destination.view ? 'active' : ''} onClick={() => navigateWorkspace(destination.path, id)}><span>0{index + 1}</span><Icon /><strong>{destination.label}</strong></button> })}</nav></aside><div className="workspace-canvas">{view === 'overview' && <WorkspaceOverview org={id} userId={userId} organizationName={organization.name} />}{(view === 'products' || view === 'offers') && <Catalog org={id} userId={userId} role={organization.role} />}{view === 'customers' && <Customers org={id} userId={userId} />}{view === 'team' && <Team id={id} userId={userId} actor={organization.role} />}{view === 'settings' && <OrganizationSettings id={id} userId={userId} organization={organization} />}</div></section>
+  const navigation = destinations.filter(destination => !destination.finance || ['OWNER', 'ADMIN', 'FINANCE'].includes(organization.role))
+  return <section className="workspace-shell" aria-label={`Organização ${organization.name}`}><aside className="workspace-rail"><div className="rail-organization"><Label htmlFor="active-org">Organização</Label><select id="active-org" value={id} onChange={event => navigateWorkspace('/dashboard', event.target.value)}>{organizations.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select><span>{roleNames[organization.role]}</span></div><nav aria-label="Navegação da organização">{navigation.map((destination, index) => { const Icon = destination.icon; return <button key={destination.view} className={view === destination.view ? 'active' : ''} onClick={() => navigateWorkspace(destination.path, id)}><span>{String(index + 1).padStart(2, '0')}</span><Icon /><strong>{destination.label}</strong></button> })}</nav></aside><div className="workspace-canvas">{view === 'overview' && <WorkspaceOverview org={id} userId={userId} organizationName={organization.name} />}{(view === 'products' || view === 'offers') && <Catalog org={id} userId={userId} role={organization.role} />}{view === 'customers' && <Customers org={id} userId={userId} />}{view === 'sales' && ['OWNER', 'ADMIN', 'FINANCE'].includes(organization.role) && <Sales org={id} userId={userId} />}{view === 'team' && <Team id={id} userId={userId} actor={organization.role} />}{view === 'settings' && <OrganizationSettings id={id} userId={userId} organization={organization} />}</div></section>
 }
 
 export function Organizations({ userId }: { userId: string }) {

@@ -98,8 +98,16 @@ public class PixPaymentTests
         Assert.Equal("19.40", wallet!.AvailableBalance); Assert.Equal("19.90", wallet.TotalReceived); Assert.Equal("0.50", wallet.TotalFees);
         var history = await owner.GetFromJsonAsync<PageResponse<LedgerTransactionResponse>>($"/api/organizations/{fixture.Org}/finance/ledger");
         Assert.Single(history!.Items); Assert.Equal(3, history.Items[0].Entries.Count);
+        var summary = await owner.GetFromJsonAsync<SalesSummaryResponse>($"/api/organizations/{fixture.Org}/finance/summary");
+        Assert.Equal("19.40", summary!.AvailableBalance); Assert.Equal(1, summary.TotalPayments); Assert.Equal(1, summary.PaidPayments); Assert.Equal("19.40", summary.NetPaid);
+        var sales = await owner.GetFromJsonAsync<PageResponse<SaleListItemResponse>>($"/api/organizations/{fixture.Org}/finance/sales?status=PAID");
+        var sale = Assert.Single(sales!.Items); Assert.Equal("Buyer Name", sale.CustomerName); Assert.Equal("19.90", sale.GrossAmount); Assert.Equal("19.40", sale.NetAmount);
+        var detail = await owner.GetFromJsonAsync<SaleDetailResponse>($"/api/organizations/{fixture.Org}/finance/sales/{paid.Id}");
+        Assert.Equal("ACTIVE", detail!.EntitlementStatus); Assert.Equal("COMPLETED", detail.FulfillmentStatus); Assert.Equal("E123", detail.EndToEndId);
+        Assert.Equal(HttpStatusCode.BadRequest, (await owner.GetAsync($"/api/organizations/{fixture.Org}/finance/sales?status=UNKNOWN")).StatusCode);
         var outsider = await PublicCheckoutTests.Fixture(app);
         Assert.Equal(HttpStatusCode.NotFound, (await outsider.Client.GetAsync($"/api/organizations/{fixture.Org}/finance/wallet")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await outsider.Client.GetAsync($"/api/organizations/{fixture.Org}/finance/sales/{paid.Id}")).StatusCode);
         var mutation = await Assert.ThrowsAsync<PostgresException>(() => db.Database.ExecuteSqlInterpolatedAsync($"UPDATE \"LedgerEntries\" SET \"Credit\" = 1 WHERE \"Id\" = {posting.Entries[0].Id}"));
         Assert.Equal(PostgresErrorCodes.ObjectNotInPrerequisiteState, mutation.SqlState);
         Assert.Equal(HttpStatusCode.BadRequest, (await webhook.PostAsync(webhookPath, new StringContent("{"))).StatusCode);
