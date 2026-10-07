@@ -11,7 +11,7 @@ public sealed class TenantAuthorization(ZyvenDbContext db)
         ?? throw new OrganizationException(404, "Organização não encontrada.");
 }
 
-public sealed class OrganizationService(ZyvenDbContext db, TenantAuthorization tenants, TimeProvider time)
+public sealed class OrganizationService(ZyvenDbContext db, TenantAuthorization tenants, TimeProvider time, IPushinPayAccountValidator accountValidator, PushinPayCredentialVault credentialVault)
 {
     public async Task<PageResponse<OrganizationResponse>> List(Guid userId, int page, int pageSize, CancellationToken ct)
     {
@@ -58,18 +58,28 @@ public sealed class OrganizationService(ZyvenDbContext db, TenantAuthorization t
 
     public async Task<PaymentAccountResponse> ConnectPaymentAccount(Guid id, Guid userId, PaymentAccountRequest request, CancellationToken ct)
     {
+        var initialActor = await tenants.RequireMembership(id, userId, ct);
+        if (initialActor.Role is not (OrganizationRoles.Owner or OrganizationRoles.Admin)) throw Forbidden();
+        if (string.IsNullOrWhiteSpace(request.Token) || request.Token.Trim().Length > 4096)
+            throw new OrganizationException(400, "Informe um token PushinPay válido.");
+        var validation = await accountValidator.ValidateAsync(request.Token.Trim(), ct);
+        if (validation == PaymentOperationError.Rejected) throw new OrganizationException(400, "O token PushinPay foi recusado.");
+        if (validation is not null) throw new OrganizationException(503, "Não foi possível validar o token PushinPay agora.");
+
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
         await Lock(id, ct);
         var actor = await tenants.RequireMembership(id, userId, ct);
         if (actor.Role is not (OrganizationRoles.Owner or OrganizationRoles.Admin)) throw Forbidden();
         var merchant = await db.MerchantAccounts.SingleAsync(x => x.OrganizationId == id, ct);
-        try { merchant.Activate(request.ProviderRecipientId ?? "", time.GetUtcNow(), request.PixKey ?? "", request.MerchantName ?? "", request.MerchantCity ?? "", request.MerchantPostalCode ?? ""); }
-        catch (ArgumentException) { throw new OrganizationException(400, "Informe conta, chave PIX, nome, cidade e CEP válidos da conta BaaS Celcoin."); }
-        Audit(id, userId, merchant.Id, "payment_account.connected");
-        try { await db.SaveChangesAsync(ct); }
-        catch (DbUpdateException) { throw new OrganizationException(409, "Esta conta Celcoin já está vinculada a outra organização."); }
+        var token = credentialVault.Encrypt(request.Token);
+        var rawCallbackSecret = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
+        var callback = credentialVault.Encrypt(rawCallbackSecret);
+        merchant.ConnectPushinPay(token.Ciphertext, token.Nonce, token.Tag, token.Fingerprint,
+            callback.Ciphertext, callback.Nonce, callback.Tag, PushinPayCredentialVault.HashCallbackSecret(rawCallbackSecret), time.GetUtcNow());
+        Audit(id, userId, merchant.Id, "payment_account.pushinpay_connected");
+        await db.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
-        return new(merchant.Status, merchant.ProviderRecipientId, merchant.PixKey, merchant.MerchantName, merchant.MerchantCity, merchant.MerchantPostalCode);
+        return new(merchant.Status, merchant.Provider!, merchant.CredentialFingerprint!);
     }
 
     public async Task<PageResponse<MemberResponse>> Members(Guid id, Guid userId, int page, int pageSize, CancellationToken ct)

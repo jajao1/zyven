@@ -49,3 +49,7 @@ public interface IPaymentProcessor : IPixProvider, ICardProvider
     Task<PaymentOperationResult> QueryAsync(PaymentLookup request, CancellationToken ct);
     Task<PaymentOperationResult> CancelAsync(PaymentLookup request, CancellationToken ct);
 }
+public interface IPushinPayAccountValidator
+{
+    Task<PaymentOperationError?> ValidateAsync(string token, CancellationToken ct);
+}

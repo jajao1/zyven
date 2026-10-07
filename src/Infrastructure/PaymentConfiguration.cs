@@ -15,8 +15,13 @@ public sealed class MerchantAccountConfiguration : IEntityTypeConfiguration<Merc
         b.Property(x => x.Provider).HasMaxLength(30);
         b.Property(x => x.CredentialCiphertext).HasMaxLength(4096); b.Property(x => x.CredentialNonce).HasMaxLength(64); b.Property(x => x.CredentialTag).HasMaxLength(64); b.Property(x => x.CredentialFingerprint).HasMaxLength(12);
         b.Property(x => x.CallbackSecretCiphertext).HasMaxLength(512); b.Property(x => x.CallbackSecretNonce).HasMaxLength(64); b.Property(x => x.CallbackSecretTag).HasMaxLength(64); b.Property(x => x.CallbackSecretHash).HasMaxLength(64);
+        b.HasIndex(x => x.CallbackSecretHash).IsUnique().HasFilter("\"CallbackSecretHash\" IS NOT NULL");
         b.HasIndex(x => x.ProviderRecipientId).IsUnique().HasFilter("\"ProviderRecipientId\" IS NOT NULL");
-        b.ToTable(t => t.HasCheckConstraint("CK_MerchantAccounts_Status", "\"Status\" IN ('PENDING','ACTIVE','SUSPENDED','BLOCKED')"));
+        b.ToTable(t =>
+        {
+            t.HasCheckConstraint("CK_MerchantAccounts_Status", "\"Status\" IN ('PENDING','ACTIVE','SUSPENDED','BLOCKED')");
+            t.HasCheckConstraint("CK_MerchantAccounts_PushinPayCredentials", "(\"Provider\" IS NULL AND \"CredentialCiphertext\" IS NULL AND \"CredentialNonce\" IS NULL AND \"CredentialTag\" IS NULL AND \"CredentialFingerprint\" IS NULL AND \"CallbackSecretCiphertext\" IS NULL AND \"CallbackSecretNonce\" IS NULL AND \"CallbackSecretTag\" IS NULL AND \"CallbackSecretHash\" IS NULL) OR (\"Provider\" = 'PUSHINPAY' AND \"CredentialCiphertext\" IS NOT NULL AND \"CredentialNonce\" IS NOT NULL AND \"CredentialTag\" IS NOT NULL AND length(\"CredentialFingerprint\") = 12 AND \"CallbackSecretCiphertext\" IS NOT NULL AND \"CallbackSecretNonce\" IS NOT NULL AND \"CallbackSecretTag\" IS NOT NULL AND length(\"CallbackSecretHash\") = 64)");
+        });
     }
 }
 public sealed class PaymentConfiguration : IEntityTypeConfiguration<Payment>
