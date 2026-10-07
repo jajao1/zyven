@@ -3,7 +3,6 @@ using System.Net;
 using Microsoft.AspNetCore.HttpOverrides;
 using System.Security.Claims;
 using System.Text;
-using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -43,7 +42,6 @@ builder.Services.AddOptions<PushinPayOptions>().Bind(builder.Configuration.GetSe
     .Validate(o => !o.Enabled || (Uri.TryCreate(o.BaseUrl, UriKind.Absolute, out var uri) && uri.Scheme == "https" && Uri.TryCreate(o.PublicApiBaseUrl, UriKind.Absolute, out var publicUri) && publicUri.Scheme == "https" && !string.IsNullOrWhiteSpace(o.PlatformAccountId) && o.MaxSplitPercent is > 0 and <= 50), "Enabled PushinPay integration requires HTTPS provider/public URLs, platform account and split limit up to 50%.").ValidateOnStart();
 builder.Services.AddSingleton(_ => new PushinPayCredentialVault(builder.Configuration["Payments:CredentialEncryptionKey"] ?? throw new InvalidOperationException("Payments:CredentialEncryptionKey is required.")));
 builder.Services.AddHttpClient<IPushinPayAccountValidator, PushinPayAccountValidator>((services, client) => { var value = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<PushinPayOptions>>().Value; client.BaseAddress = new(value.BaseUrl); client.Timeout = TimeSpan.FromSeconds(20); });
-builder.Services.AddOptions<CelcoinOptions>().Bind(builder.Configuration.GetSection(CelcoinOptions.SectionName)).Validate(o => !o.Enabled || (Uri.TryCreate(o.BaseUrl, UriKind.Absolute, out var uri) && uri.Scheme == "https" && !string.IsNullOrWhiteSpace(o.ClientId) && !string.IsNullOrWhiteSpace(o.ClientSecret) && !string.IsNullOrWhiteSpace(o.PlatformAccount) && !string.IsNullOrWhiteSpace(o.WebhookUsername) && !string.IsNullOrWhiteSpace(o.WebhookPassword) && o.MaxSplitPercent is > 0 and <= 100 && (!uri.Host.Equals("api.openfinance.celcoin.com.br", StringComparison.OrdinalIgnoreCase) || !string.IsNullOrWhiteSpace(o.CertificatePath))), "Enabled Celcoin integration requires HTTPS URL, credentials, platform account, webhook credentials, valid split limit and production mTLS certificate.").ValidateOnStart();
 if (builder.Configuration.GetValue<bool>("Payments:PushinPay:Enabled"))
 {
     builder.Services.AddHttpClient<IPaymentProcessor, PushinPayPaymentProcessor>((services, client) => { var value = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<PushinPayOptions>>().Value; client.BaseAddress = new(value.BaseUrl); client.Timeout = TimeSpan.FromSeconds(20); });
@@ -52,7 +50,7 @@ else builder.Services.AddSingleton<IPaymentProcessor, UnconfiguredPaymentProcess
 builder.Services.AddScoped<CatalogService>();
 builder.Services.AddScoped<PublicCheckoutService>();
 builder.Services.AddScoped<PixPaymentService>();
-builder.Services.AddScoped<CelcoinWebhookService>();
+builder.Services.AddScoped<PushinPayWebhookService>();
 builder.Services.AddScoped<LedgerService>();
 builder.Services.AddScoped<FulfillmentService>();
 builder.Services.AddScoped<CustomerService>();
@@ -182,7 +180,7 @@ app.MapPublicCheckout();
 app.MapCustomers();
 app.MapLedger();
 app.MapFulfillment();
-app.MapCelcoinWebhook();
+app.MapPushinPayWebhook();
 await app.RunAsync();
 static CookieOptions CookieOptions(bool development) => new() { HttpOnly = true, Secure = !development, SameSite = SameSiteMode.Strict, Path = "/api/auth", IsEssential = true };
 static void SetCookie(HttpContext context, AuthGrant grant, bool development) { var options = CookieOptions(development); options.Expires = grant.ExpiresAt; context.Response.Cookies.Append("zyven_refresh", grant.RefreshToken, options); }
