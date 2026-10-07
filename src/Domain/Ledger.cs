@@ -2,7 +2,7 @@ namespace Zyven.Domain;
 
 public static class LedgerAccountCodes
 {
-    public const string CelcoinClearing = "CELCOIN_CLEARING";
+    public const string PaymentProcessorClearing = "PAYMENT_PROCESSOR_CLEARING";
     public const string MerchantAvailable = "MERCHANT_AVAILABLE";
     public const string PlatformFeeRevenue = "PLATFORM_FEE_REVENUE";
     public const string ProviderFeePayable = "PROVIDER_FEE_PAYABLE";
@@ -24,7 +24,7 @@ public sealed class LedgerAccount
         if (organizationId == Guid.Empty) throw new ArgumentException("Organization is required.", nameof(organizationId));
         return
         [
-            New(organizationId, LedgerAccountCodes.CelcoinClearing, "Celcoin clearing", "ASSET", "DEBIT", now),
+            New(organizationId, LedgerAccountCodes.PaymentProcessorClearing, "Payment processor clearing", "ASSET", "DEBIT", now),
             New(organizationId, LedgerAccountCodes.MerchantAvailable, "Merchant available", "LIABILITY", "CREDIT", now),
             New(organizationId, LedgerAccountCodes.PlatformFeeRevenue, "Platform fee revenue", "REVENUE", "CREDIT", now),
             New(organizationId, LedgerAccountCodes.ProviderFeePayable, "Provider fee payable", "LIABILITY", "CREDIT", now)
@@ -50,10 +50,10 @@ public sealed class LedgerTransaction
     public static LedgerTransaction Capture(Payment payment, IReadOnlyDictionary<string, LedgerAccount> accounts, DateTimeOffset now)
     {
         if (payment.Status != "PAID" || payment.PaidAt is null) throw new InvalidOperationException("Only a confirmed payment can be posted.");
-        var required = new[] { LedgerAccountCodes.CelcoinClearing, LedgerAccountCodes.MerchantAvailable, LedgerAccountCodes.PlatformFeeRevenue, LedgerAccountCodes.ProviderFeePayable };
+        var required = new[] { LedgerAccountCodes.PaymentProcessorClearing, LedgerAccountCodes.MerchantAvailable, LedgerAccountCodes.PlatformFeeRevenue, LedgerAccountCodes.ProviderFeePayable };
         if (required.Any(code => !accounts.TryGetValue(code, out var account) || account.OrganizationId != payment.OrganizationId)) throw new InvalidOperationException("The complete organization ledger chart is required.");
         var transaction = new LedgerTransaction { OrganizationId = payment.OrganizationId, PaymentId = payment.Id, Reference = payment.ExternalReference, Currency = payment.Currency, OccurredAt = payment.PaidAt.Value, CreatedAt = now };
-        transaction.entries.Add(LedgerEntry.CreateDebit(transaction, accounts[LedgerAccountCodes.CelcoinClearing], payment.GrossAmount, now));
+        transaction.entries.Add(LedgerEntry.CreateDebit(transaction, accounts[LedgerAccountCodes.PaymentProcessorClearing], payment.GrossAmount, now));
         transaction.entries.Add(LedgerEntry.CreateCredit(transaction, accounts[LedgerAccountCodes.MerchantAvailable], payment.NetAmount, now));
         if (payment.PlatformFee > 0) transaction.entries.Add(LedgerEntry.CreateCredit(transaction, accounts[LedgerAccountCodes.PlatformFeeRevenue], payment.PlatformFee, now));
         if (payment.ProviderFee > 0) transaction.entries.Add(LedgerEntry.CreateCredit(transaction, accounts[LedgerAccountCodes.ProviderFeePayable], payment.ProviderFee, now));

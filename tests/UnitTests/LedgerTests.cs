@@ -3,6 +3,15 @@ namespace UnitTests;
 
 public class LedgerTests
 {
+    [Fact]
+    public void Organization_chart_uses_provider_neutral_clearing()
+    {
+        var accounts = LedgerAccount.CreateChart(Guid.NewGuid(), DateTimeOffset.UtcNow);
+
+        Assert.Contains(accounts, x => x.Code == "PAYMENT_PROCESSOR_CLEARING");
+        Assert.DoesNotContain(accounts, x => x.Code == "CELCOIN_CLEARING");
+    }
+
     [Theory]
     [InlineData("100.00", "2.00", "0.80")]
     [InlineData("19.90", "0.50", "0.00")]

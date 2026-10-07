@@ -23,7 +23,7 @@ public sealed class LedgerService(ZyvenDbContext db, TenantAuthorization tenants
                             select new
                             {
                                 Available = all.Where(x => x.account.Code == LedgerAccountCodes.MerchantAvailable).Sum(x => x.entry.Credit - x.entry.Debit),
-                                Received = all.Where(x => x.account.Code == LedgerAccountCodes.CelcoinClearing).Sum(x => x.entry.Debit),
+                                Received = all.Where(x => x.account.Code == LedgerAccountCodes.PaymentProcessorClearing).Sum(x => x.entry.Debit),
                                 Fees = all.Where(x => x.account.Code == LedgerAccountCodes.PlatformFeeRevenue || x.account.Code == LedgerAccountCodes.ProviderFeePayable).Sum(x => x.entry.Credit)
                             }).SingleOrDefaultAsync(ct);
         return new("BRL", Money(totals?.Available ?? 0), Money(0), Money(0), Money(totals?.Received ?? 0), Money(0), Money(totals?.Fees ?? 0));
