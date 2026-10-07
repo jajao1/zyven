@@ -6,8 +6,9 @@ using Zyven.Application;
 using Zyven.Domain;
 namespace Zyven.Infrastructure;
 
-public sealed class PixPaymentService(ZyvenDbContext db, IPaymentProcessor provider, PaymentFeePolicy fees, TimeProvider time)
+public sealed class PixPaymentService(ZyvenDbContext db, IPaymentProcessor provider, PaymentFeePolicy fees, TimeProvider time, PushinPayCredentialVault credentialVault, Microsoft.Extensions.Options.IOptions<PushinPayOptions> configured)
 {
+    private readonly PushinPayOptions options = configured.Value;
     public async Task<PixPaymentResponse> Create(Guid checkoutId, string? secret, CancellationToken ct)
     {
         Payment payment;
@@ -19,7 +20,7 @@ public sealed class PixPaymentService(ZyvenDbContext db, IPaymentProcessor provi
             var existing = await db.Payments.SingleOrDefaultAsync(x => x.CheckoutSessionId == checkoutId, ct);
             if (existing is not null) { await transaction.CommitAsync(ct); return Response(existing); }
             merchant = await db.MerchantAccounts.SingleOrDefaultAsync(x => x.OrganizationId == checkout.OrganizationId, ct) ?? throw new OrganizationException(409, "A conta de pagamentos da organização não foi configurada.");
-            if (merchant.Status != "ACTIVE" || string.IsNullOrWhiteSpace(merchant.PixKey) || string.IsNullOrWhiteSpace(merchant.MerchantName) || string.IsNullOrWhiteSpace(merchant.MerchantCity) || string.IsNullOrWhiteSpace(merchant.MerchantPostalCode)) throw new OrganizationException(409, "A conta Celcoin da organização está incompleta ou inativa.");
+            if (merchant.Status != "ACTIVE" || merchant.Provider != "PUSHINPAY" || string.IsNullOrWhiteSpace(merchant.CredentialCiphertext) || string.IsNullOrWhiteSpace(merchant.CredentialNonce) || string.IsNullOrWhiteSpace(merchant.CredentialTag) || string.IsNullOrWhiteSpace(merchant.CallbackSecretCiphertext) || string.IsNullOrWhiteSpace(merchant.CallbackSecretNonce) || string.IsNullOrWhiteSpace(merchant.CallbackSecretTag)) throw new OrganizationException(409, "A conta PushinPay da organização está desconectada ou inativa.");
             customer = await db.Customers.SingleAsync(x => x.Id == checkout.CustomerId && x.OrganizationId == checkout.OrganizationId, ct);
             if (string.IsNullOrWhiteSpace(checkout.Document)) throw new OrganizationException(400, "Informe o CPF ou CNPJ para gerar o PIX.");
             PaymentFees configured;
@@ -29,14 +30,17 @@ public sealed class PixPaymentService(ZyvenDbContext db, IPaymentProcessor provi
         }
 
         var payer = new PaymentPayer(customer.Name, customer.Document ?? "", customer.Email, customer.Phone ?? "");
-        var result = await provider.CreatePixAsync(new(payment, payer, merchant.ProviderRecipientId, merchant.PixKey, merchant.MerchantName, merchant.MerchantCity, merchant.MerchantPostalCode), ct);
+        var token = credentialVault.Decrypt(new(merchant.CredentialCiphertext!, merchant.CredentialNonce!, merchant.CredentialTag!, merchant.CredentialFingerprint ?? ""));
+        var callbackSecret = credentialVault.Decrypt(new(merchant.CallbackSecretCiphertext!, merchant.CallbackSecretNonce!, merchant.CallbackSecretTag!, ""));
+        var callbackUrl = $"{options.PublicApiBaseUrl.TrimEnd('/')}/api/webhooks/pushinpay/{merchant.Id:N}/{callbackSecret}";
+        var result = await provider.CreatePixAsync(new(payment, payer, credential: new(token, callbackUrl)), ct);
         db.ChangeTracker.Clear(); payment = await db.Payments.SingleAsync(x => x.Id == payment.Id, ct);
         if (result.State is not null)
         {
-            payment.AttachPix("CELCOIN", result.State.ProviderTransactionId, result.State.QrCodeData, result.State.PixCode ?? throw new InvalidOperationException("Celcoin did not return an EMV code."), result.State.ExpiresAt ?? payment.ExpiresAt, time.GetUtcNow());
+            payment.AttachPix("PUSHINPAY", result.State.ProviderTransactionId, result.State.QrCodeData, result.State.PixCode ?? throw new InvalidOperationException("PushinPay did not return a PIX code."), result.State.ExpiresAt ?? payment.ExpiresAt, time.GetUtcNow());
             await db.SaveChangesAsync(ct); return Response(payment);
         }
-        if (result.Error == PaymentOperationError.Rejected) { payment.Fail(time.GetUtcNow()); await db.SaveChangesAsync(ct); throw new OrganizationException(422, "A Celcoin rejeitou a criação desta cobrança PIX."); }
+        if (result.Error == PaymentOperationError.Rejected) { payment.Fail(time.GetUtcNow()); await db.SaveChangesAsync(ct); throw new OrganizationException(422, "A PushinPay rejeitou a criação desta cobrança PIX."); }
         throw new OrganizationException(503, "A confirmação da criação do PIX está pendente. Consulte novamente em instantes.");
     }
 

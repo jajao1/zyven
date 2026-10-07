@@ -15,23 +15,24 @@ namespace IntegrationTests;
 
 public class PixPaymentTests
 {
-    private sealed class FakeProcessor : IPaymentProcessor
+    private sealed class FakeProcessor : IPaymentProcessor, IPushinPayAccountValidator
     {
         public int Calls { get; private set; }
         public PaymentCapabilities Capabilities => new(true, false, false);
-        public Task<PaymentOperationResult> CreatePixAsync(PaymentChargeRequest request, CancellationToken ct) { Calls++; return Task.FromResult(new PaymentOperationResult(new("celcoin-1", "PENDING", request.Amounts.GrossAmount, "BRL", null, request.ExpiresAt, null, "000201-pix", "tx-identification"), null)); }
+        public Task<PaymentOperationResult> CreatePixAsync(PaymentChargeRequest request, CancellationToken ct) { Calls++; return Task.FromResult(new PaymentOperationResult(new("tx-1", "PENDING", request.Amounts.GrossAmount, "BRL", null, request.ExpiresAt, null, "000201-pix", "qr-image"), null)); }
         public Task<PaymentOperationResult> CreateCardAsync(CardChargeRequest request, CancellationToken ct) => throw new NotSupportedException();
         public Task<PaymentOperationResult> QueryAsync(PaymentLookup request, CancellationToken ct) => throw new NotSupportedException();
         public Task<PaymentOperationResult> CancelAsync(PaymentLookup request, CancellationToken ct) => throw new NotSupportedException();
+        public Task<PaymentOperationError?> ValidateAsync(string token, CancellationToken ct) => Task.FromResult<PaymentOperationError?>(null);
     }
 
     [Fact]
     public async Task Checkout_creates_one_pix_charge_and_returns_it_idempotently()
     {
         var provider = new FakeProcessor();
-        await using var app = new WebApplicationFactory<Program>().WithWebHostBuilder(builder => builder.ConfigureServices(services => { services.RemoveAll<IPaymentProcessor>(); services.AddSingleton<IPaymentProcessor>(provider); }));
+        await using var app = new WebApplicationFactory<Program>().WithWebHostBuilder(builder => builder.ConfigureServices(services => { services.RemoveAll<IPaymentProcessor>(); services.RemoveAll<IPushinPayAccountValidator>(); services.AddSingleton<IPaymentProcessor>(provider); services.AddSingleton<IPushinPayAccountValidator>(provider); }));
         var fixture = await PublicCheckoutTests.Fixture(app); using var owner = fixture.Client;
-        (await owner.PutAsJsonAsync($"/api/organizations/{fixture.Org}/payment-account", new { providerRecipientId = "seller-" + Guid.NewGuid().ToString("N"), pixKey = "seller@example.test", merchantName = "PUBLIC STUDIO", merchantCity = "SAO PAULO", merchantPostalCode = "01001000" })).EnsureSuccessStatusCode();
+        (await owner.PutAsJsonAsync($"/api/organizations/{fixture.Org}/payment-account", new { token = "seller-token" })).EnsureSuccessStatusCode();
         using var buyer = app.CreateClient(new() { HandleCookies = false }); buyer.DefaultRequestHeaders.Add("X-Zyven-Client", "web");
         var checkoutResponse = await buyer.PostAsJsonAsync($"/api/public/offers/{fixture.Slug}/checkouts", new { name = "Buyer Name", email = "buyer@example.test", document = "12345678909", fields = new { } }); checkoutResponse.EnsureSuccessStatusCode();
         var checkout = await checkoutResponse.Content.ReadFromJsonAsync<CheckoutResponse>(); var cookie = checkoutResponse.Headers.GetValues("Set-Cookie").Single().Split(';')[0]; buyer.DefaultRequestHeaders.Add("Cookie", cookie);
@@ -41,6 +42,8 @@ public class PixPaymentTests
 
         Assert.Equal(HttpStatusCode.OK, first.StatusCode); Assert.Equal(HttpStatusCode.OK, second.StatusCode); Assert.Equal(1, provider.Calls);
         var payment = await first.Content.ReadFromJsonAsync<PixPaymentResponse>(); Assert.Equal("000201-pix", payment!.PixCode); Assert.Equal("PENDING", payment.Status); Assert.Equal("19.90", payment.Amount);
+        using var scope = app.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<ZyvenDbContext>();
+        var stored = await db.Payments.SingleAsync(x => x.CheckoutSessionId == checkout.Id); Assert.Equal("PUSHINPAY", stored.Provider); Assert.Equal("tx-1", stored.ProviderTransactionId);
     }
 
     [Fact]
@@ -50,11 +53,11 @@ public class PixPaymentTests
         await using var app = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
             builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?> { ["Payments:Celcoin:WebhookUsername"] = "celcoin", ["Payments:Celcoin:WebhookPassword"] = "secret" }));
-            builder.ConfigureServices(services => { services.RemoveAll<IPaymentProcessor>(); services.AddSingleton<IPaymentProcessor>(provider); });
+            builder.ConfigureServices(services => { services.RemoveAll<IPaymentProcessor>(); services.RemoveAll<IPushinPayAccountValidator>(); services.AddSingleton<IPaymentProcessor>(provider); services.AddSingleton<IPushinPayAccountValidator>(provider); });
         });
         var fixture = await PublicCheckoutTests.Fixture(app); using var owner = fixture.Client;
         (await owner.PutAsJsonAsync($"/api/organizations/{fixture.Org}/offers/{fixture.Offer}/fulfillments/external-link", new { name = "Acessar curso", url = "https://members.example.test/course" })).EnsureSuccessStatusCode();
-        (await owner.PutAsJsonAsync($"/api/organizations/{fixture.Org}/payment-account", new { providerRecipientId = "seller-" + Guid.NewGuid().ToString("N"), pixKey = "seller@example.test", merchantName = "PUBLIC STUDIO", merchantCity = "SAO PAULO", merchantPostalCode = "01001000" })).EnsureSuccessStatusCode();
+        (await owner.PutAsJsonAsync($"/api/organizations/{fixture.Org}/payment-account", new { token = "seller-token" })).EnsureSuccessStatusCode();
         using var buyer = app.CreateClient(new() { HandleCookies = false }); buyer.DefaultRequestHeaders.Add("X-Zyven-Client", "web");
         var checkoutResponse = await buyer.PostAsJsonAsync($"/api/public/offers/{fixture.Slug}/checkouts", new { name = "Buyer Name", email = "buyer2@example.test", document = "12345678909", fields = new { } });
         var checkout = await checkoutResponse.Content.ReadFromJsonAsync<CheckoutResponse>(); buyer.DefaultRequestHeaders.Add("Cookie", checkoutResponse.Headers.GetValues("Set-Cookie").Single().Split(';')[0]);
