@@ -30,6 +30,15 @@ public sealed class MerchantAccount
     public string? MerchantName { get; private set; }
     public string? MerchantCity { get; private set; }
     public string? MerchantPostalCode { get; private set; }
+    public string? Provider { get; private set; }
+    public string? CredentialCiphertext { get; private set; }
+    public string? CredentialNonce { get; private set; }
+    public string? CredentialTag { get; private set; }
+    public string? CredentialFingerprint { get; private set; }
+    public string? CallbackSecretCiphertext { get; private set; }
+    public string? CallbackSecretNonce { get; private set; }
+    public string? CallbackSecretTag { get; private set; }
+    public string? CallbackSecretHash { get; private set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
     public void Activate(string providerRecipientId, DateTimeOffset now, string? pixKey = null, string? merchantName = null, string? merchantCity = null, string? merchantPostalCode = null)
@@ -41,6 +50,39 @@ public sealed class MerchantAccount
         if (merchantPostalCode is not null && (merchantPostalCode.Length != 8 || merchantPostalCode.Any(c => !char.IsAsciiDigit(c)))) throw new ArgumentException("A valid merchant postal code is required.", nameof(merchantPostalCode));
         ProviderRecipientId = providerRecipientId.Trim(); PixKey = pixKey?.Trim(); MerchantName = merchantName?.Trim(); MerchantCity = merchantCity?.Trim(); MerchantPostalCode = merchantPostalCode;
         Status = "ACTIVE"; UpdatedAt = now;
+    }
+
+    public void ConnectPushinPay(
+        string credentialCiphertext, string credentialNonce, string credentialTag, string credentialFingerprint,
+        string callbackSecretCiphertext, string callbackSecretNonce, string callbackSecretTag, string callbackSecretHash,
+        DateTimeOffset now)
+    {
+        var values = new[] { credentialCiphertext, credentialNonce, credentialTag, credentialFingerprint, callbackSecretCiphertext, callbackSecretNonce, callbackSecretTag, callbackSecretHash };
+        if (values.Any(string.IsNullOrWhiteSpace)) throw new ArgumentException("Complete encrypted PushinPay credentials are required.");
+        if (credentialFingerprint.Length != 12 || callbackSecretHash.Length != 64) throw new ArgumentException("Invalid PushinPay credential metadata.");
+
+        Provider = "PUSHINPAY";
+        CredentialCiphertext = credentialCiphertext;
+        CredentialNonce = credentialNonce;
+        CredentialTag = credentialTag;
+        CredentialFingerprint = credentialFingerprint;
+        CallbackSecretCiphertext = callbackSecretCiphertext;
+        CallbackSecretNonce = callbackSecretNonce;
+        CallbackSecretTag = callbackSecretTag;
+        CallbackSecretHash = callbackSecretHash;
+        ProviderRecipientId = null;
+        PixKey = null;
+        MerchantName = null;
+        MerchantCity = null;
+        MerchantPostalCode = null;
+        Status = "ACTIVE";
+        UpdatedAt = now;
+    }
+
+    public void Disconnect(DateTimeOffset now)
+    {
+        Status = "PENDING";
+        UpdatedAt = now;
     }
 }
 public sealed class Payment

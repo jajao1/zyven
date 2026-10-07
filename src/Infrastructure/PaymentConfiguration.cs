@@ -12,6 +12,9 @@ public sealed class MerchantAccountConfiguration : IEntityTypeConfiguration<Merc
         b.Property(x => x.Status).HasMaxLength(20).HasDefaultValue("PENDING");
         b.Property(x => x.ProviderRecipientId).HasMaxLength(200);
         b.Property(x => x.PixKey).HasMaxLength(200); b.Property(x => x.MerchantName).HasMaxLength(25); b.Property(x => x.MerchantCity).HasMaxLength(15); b.Property(x => x.MerchantPostalCode).HasMaxLength(8);
+        b.Property(x => x.Provider).HasMaxLength(30);
+        b.Property(x => x.CredentialCiphertext).HasMaxLength(4096); b.Property(x => x.CredentialNonce).HasMaxLength(64); b.Property(x => x.CredentialTag).HasMaxLength(64); b.Property(x => x.CredentialFingerprint).HasMaxLength(12);
+        b.Property(x => x.CallbackSecretCiphertext).HasMaxLength(512); b.Property(x => x.CallbackSecretNonce).HasMaxLength(64); b.Property(x => x.CallbackSecretTag).HasMaxLength(64); b.Property(x => x.CallbackSecretHash).HasMaxLength(64);
         b.HasIndex(x => x.ProviderRecipientId).IsUnique().HasFilter("\"ProviderRecipientId\" IS NOT NULL");
         b.ToTable(t => t.HasCheckConstraint("CK_MerchantAccounts_Status", "\"Status\" IN ('PENDING','ACTIVE','SUSPENDED','BLOCKED')"));
     }
