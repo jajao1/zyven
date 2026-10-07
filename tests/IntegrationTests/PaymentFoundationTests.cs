@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
 using Zyven.Application;
 using Zyven.Domain;
@@ -13,20 +14,28 @@ namespace IntegrationTests;
 
 public class PaymentFoundationTests
 {
-    [Fact]
-    public async Task Owner_connects_the_organization_to_a_celcoin_baas_account()
+    private sealed class AcceptingValidator : IPushinPayAccountValidator
     {
-        await using var app = new WebApplicationFactory<Program>();
+        public Task<PaymentOperationError?> ValidateAsync(string token, CancellationToken ct) => Task.FromResult<PaymentOperationError?>(null);
+    }
+
+    [Fact]
+    public async Task Owner_connects_the_organization_to_a_pushinpay_account()
+    {
+        await using var app = new WebApplicationFactory<Program>().WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+        {
+            services.RemoveAll<IPushinPayAccountValidator>(); services.AddSingleton<IPushinPayAccountValidator, AcceptingValidator>();
+        }));
         var fixture = await PublicCheckoutTests.Fixture(app); using var client = fixture.Client;
 
-        var response = await client.PutAsJsonAsync($"/api/organizations/{fixture.Org}/payment-account", new { providerRecipientId = $"seller-{Guid.NewGuid():N}", pixKey = "seller@example.test", merchantName = "PUBLIC STUDIO", merchantCity = "SAO PAULO", merchantPostalCode = "01001000" });
+        var response = await client.PutAsJsonAsync($"/api/organizations/{fixture.Org}/payment-account", new { token = "seller-token" });
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var scope = app.Services.CreateScope();
         var merchant = await scope.ServiceProvider.GetRequiredService<ZyvenDbContext>().MerchantAccounts.SingleAsync(x => x.OrganizationId == fixture.Org);
         Assert.Equal("ACTIVE", merchant.Status);
-        Assert.StartsWith("seller-", merchant.ProviderRecipientId);
-        Assert.Equal("seller@example.test", merchant.PixKey);
+        Assert.Equal("PUSHINPAY", merchant.Provider);
+        Assert.NotEqual("seller-token", merchant.CredentialCiphertext);
     }
 
     [Fact]
@@ -64,6 +73,8 @@ public class PaymentFoundationTests
             var checkout = new CheckoutSession { OrganizationId = org.Id, CustomerId = customer.Id, OfferId = offer.Id, Price = 10, Currency = "BRL", CreatedAt = now, ExpiresAt = now.AddMinutes(30) }; db.Checkouts.Add(checkout); await db.SaveChangesAsync();
             await db.Database.MigrateAsync();
             var merchants = await db.Set<MerchantAccount>().ToListAsync(); Assert.Equal(2, merchants.Count); Assert.All(merchants, m => Assert.Equal("PENDING", m.Status));
+            Assert.Equal(2, await db.LedgerAccounts.CountAsync(x => x.Code == "PAYMENT_PROCESSOR_CLEARING"));
+            Assert.False(await db.LedgerAccounts.AnyAsync(x => x.Code == "CELCOIN_CLEARING"));
             Assert.Empty(await db.Set<Payment>().ToListAsync());
             var merchant = merchants.Single(x => x.OrganizationId == org.Id); var otherMerchant = merchants.Single(x => x.OrganizationId == other.Id);
             checkout.CustomerId = customer2.Id; await db.SaveChangesAsync(); // remains mutable before a payment
