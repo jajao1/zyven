@@ -14,3 +14,9 @@ Quando o webhook confirma o PIX, a mesma transação do PostgreSQL conclui o che
 O comprador acessa `GET /api/public/checkouts/{id}/delivery`. A autorização usa o segredo aleatório de 384 bits do checkout, armazenado somente como hash no banco e enviado em cookie `HttpOnly`, `SameSite=Strict`. A sessão de acesso dura 30 dias. Sem o cookie correspondente, o endpoint responde como recurso inexistente e não revela a compra.
 
 O frontend mostra novamente a entrega quando o comprador abre a URL da oferta com `?checkout={id}` no mesmo navegador autenticado.
+
+## Arquivo digital protegido
+
+`POST /api/organizations/{org}/offers/{offer}/fulfillments/digital-file` recebe multipart com o campo `file`. OWNER, ADMIN e OPERATOR podem enviar PDF, ZIP, EPUB, XLSX, PNG ou JPEG de até 25 MiB. Extensão e `Content-Type` não são confiados isoladamente: a API valida a assinatura binária, gera uma chave aleatória e grava o conteúdo fora da área pública.
+
+`GET` no mesmo endereço retorna somente metadados. Após o pagamento, a execução preserva o asset selecionado naquele momento. Checkout e Área do comprador recebem endpoints internos de download que revalidam pagamento e entitlement; a chave física nunca é exposta.

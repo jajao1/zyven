@@ -92,7 +92,7 @@ Para desenvolver o frontend com a API do Compose: `cd web`, `npm ci`, `npm run d
 
 ## Evolução
 
-O primeiro fluxo completo termina em `EXTERNAL_LINK` após pagamento confirmado no servidor. Telegram, Discord e arquivos protegidos permanecem expansões. A fonte financeira é o ledger imutável, nunca um saldo editável.
+Os fluxos `EXTERNAL_LINK` e `DIGITAL_FILE` são liberados após pagamento confirmado no servidor. Telegram, Discord e área de membros permanecem expansões. A fonte financeira é o ledger imutável, nunca um saldo editável.
 
 Catálogo e smoke específico: [docs/catalog.md](docs/catalog.md). Estado e dependências: [docs/implementation-status.md](docs/implementation-status.md).
 

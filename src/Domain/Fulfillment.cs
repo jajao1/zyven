@@ -9,6 +9,7 @@ public sealed class FulfillmentDefinition
     public string Type { get; private set; } = "EXTERNAL_LINK";
     public string Name { get; private set; } = "";
     public string ExternalUrl { get; private set; } = "";
+    public Guid? DigitalAssetId { get; private set; }
     public string Status { get; private set; } = "ACTIVE";
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
@@ -25,6 +26,16 @@ public sealed class FulfillmentDefinition
     {
         if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > 100 || !SafeUrl(url)) throw new ArgumentException("A valid name and HTTPS URL are required.");
         Name = name.Trim(); ExternalUrl = url.Trim(); Status = "ACTIVE"; UpdatedAt = now;
+    }
+    public static FulfillmentDefinition DigitalFile(Guid organizationId, Guid offerId, Guid assetId, string name, DateTimeOffset now)
+    {
+        if (organizationId == Guid.Empty || offerId == Guid.Empty || assetId == Guid.Empty || string.IsNullOrWhiteSpace(name) || name.Trim().Length > 100) throw new ArgumentException("A valid digital asset is required.");
+        return new() { OrganizationId = organizationId, OfferId = offerId, DigitalAssetId = assetId, Type = "DIGITAL_FILE", Name = name.Trim(), CreatedAt = now, UpdatedAt = now };
+    }
+    public void UpdateDigitalFile(Guid assetId, string name, DateTimeOffset now)
+    {
+        if (Type != "DIGITAL_FILE" || assetId == Guid.Empty || string.IsNullOrWhiteSpace(name) || name.Trim().Length > 100) throw new ArgumentException("A valid digital asset is required.");
+        DigitalAssetId = assetId; Name = name.Trim(); Status = "ACTIVE"; UpdatedAt = now;
     }
     private static bool SafeUrl(string? value) => value is { Length: <= 2048 } && Uri.TryCreate(value.Trim(), UriKind.Absolute, out var uri) && uri.Scheme == "https" && string.IsNullOrEmpty(uri.UserInfo);
 }
@@ -62,12 +73,25 @@ public sealed class FulfillmentExecution
     public string Status { get; private set; } = "COMPLETED";
     public string Name { get; private set; } = "";
     public string ExternalUrl { get; private set; } = "";
+    public Guid? DigitalAssetId { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset CompletedAt { get; private set; }
 
     public static FulfillmentExecution Deliver(Entitlement entitlement, FulfillmentDefinition definition, DateTimeOffset now)
     {
-        if (entitlement.Status != "ACTIVE" || definition.Status != "ACTIVE" || definition.Type != "EXTERNAL_LINK" || entitlement.OrganizationId != definition.OrganizationId || entitlement.OfferId != definition.OfferId) throw new InvalidOperationException("An active matching entitlement and fulfillment are required.");
-        return new() { OrganizationId = entitlement.OrganizationId, EntitlementId = entitlement.Id, FulfillmentDefinitionId = definition.Id, Name = definition.Name, ExternalUrl = definition.ExternalUrl, CreatedAt = now, CompletedAt = now };
+        if (entitlement.Status != "ACTIVE" || definition.Status != "ACTIVE" || definition.Type is not ("EXTERNAL_LINK" or "DIGITAL_FILE") || entitlement.OrganizationId != definition.OrganizationId || entitlement.OfferId != definition.OfferId || (definition.Type == "DIGITAL_FILE" && definition.DigitalAssetId is null)) throw new InvalidOperationException("An active matching entitlement and fulfillment are required.");
+        return new() { OrganizationId = entitlement.OrganizationId, EntitlementId = entitlement.Id, FulfillmentDefinitionId = definition.Id, Type = definition.Type, Name = definition.Name, ExternalUrl = definition.ExternalUrl, DigitalAssetId = definition.DigitalAssetId, CreatedAt = now, CompletedAt = now };
     }
+}
+
+public sealed class DigitalAsset
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid OrganizationId { get; set; }
+    public string DisplayName { get; set; } = "";
+    public string ContentType { get; set; } = "";
+    public long Size { get; set; }
+    public string Sha256 { get; set; } = "";
+    public string StorageKey { get; set; } = "";
+    public DateTimeOffset CreatedAt { get; set; }
 }

@@ -54,7 +54,8 @@ public sealed class FulfillmentService(ZyvenDbContext db, TenantAuthorization te
                                  join payment in db.Payments.AsNoTracking() on item.PaymentId equals payment.Id
                                  where payment.CheckoutSessionId == checkoutId && item.OrganizationId == checkout.OrganizationId && item.Status == "ACTIVE"
                                  select item).SingleOrDefaultAsync(ct) ?? throw MissingDelivery();
-        var items = await db.FulfillmentExecutions.AsNoTracking().Where(x => x.OrganizationId == checkout.OrganizationId && x.EntitlementId == entitlement.Id && x.Status == "COMPLETED").OrderBy(x => x.CreatedAt).Select(x => new DeliveryItemResponse(x.Id, x.Type, x.Name, x.ExternalUrl, x.CompletedAt)).ToListAsync(ct);
+        var rows = await db.FulfillmentExecutions.AsNoTracking().Where(x => x.OrganizationId == checkout.OrganizationId && x.EntitlementId == entitlement.Id && x.Status == "COMPLETED").OrderBy(x => x.CreatedAt).Select(x => new { x.Id, x.Type, x.Name, x.ExternalUrl, x.CompletedAt }).ToListAsync(ct);
+        var items = rows.Select(x => new DeliveryItemResponse(x.Id, x.Type, x.Name, x.Type == "DIGITAL_FILE" ? $"/api/public/checkouts/{checkoutId}/files/{x.Id}" : x.ExternalUrl, x.CompletedAt)).ToList();
         return new(entitlement.Id, entitlement.Status, items);
     }
 

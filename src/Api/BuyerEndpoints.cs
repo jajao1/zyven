@@ -43,6 +43,13 @@ public static class BuyerEndpoints
             var item = await purchases.Detail(email, paymentId, ct);
             return item is null ? Results.NotFound() : Results.Ok(item);
         });
+        group.MapGet("/files/{executionId:guid}", async (Guid executionId, BuyerAuthService auth, DigitalFileService files, HttpContext context, CancellationToken ct) =>
+        {
+            var email = await auth.Authenticate(context.Request.Cookies[CookieName], ct);
+            if (email is null) return Results.Unauthorized();
+            var download = await files.BuyerDownload(email, executionId, ct);
+            return download is null ? Results.NotFound() : Results.File(download.Stream, download.ContentType, download.Name, enableRangeProcessing: true);
+        });
     }
 
     private static CookieOptions Options(bool development, DateTimeOffset? expires) => new() { HttpOnly = true, Secure = !development, SameSite = SameSiteMode.Lax, Path = "/api/buyer", IsEssential = true, Expires = expires };

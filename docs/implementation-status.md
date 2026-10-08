@@ -13,7 +13,7 @@ A especificação mestre permanece a autoridade. Este mapa registra a sequência
 | 7 | Webhook autenticado, confirmação e idempotência | Validada e enviada |
 | 8 | Ledger imutável, wallet e regras de taxas | Validada e enviada |
 | 9 | Fulfillment e entitlements | Núcleo validado com o primeiro fluxo `EXTERNAL_LINK` |
-| 10 | Arquivos protegidos e external link | `EXTERNAL_LINK` validado; arquivos protegidos pendentes |
+| 10 | Arquivos protegidos e external link | `EXTERNAL_LINK` e `DIGITAL_FILE` implementados com acesso protegido |
 | 11 | Telegram | Após primeiro fluxo completo |
 | 12 | Área de membros | Pendente |
 | 13 | Assinaturas e expiração de acesso | Pendente |

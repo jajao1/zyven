@@ -17,6 +17,20 @@ public class FulfillmentTests
         Assert.Equal("COMPLETED", execution.Status); Assert.Equal("https://members.example.test/access", execution.ExternalUrl);
     }
 
+    [Fact]
+    public void Paid_payment_can_snapshot_a_digital_asset_delivery()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var payment = Paid(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), now);
+        var entitlement = Entitlement.FromPaidPayment(payment, now);
+        var asset = Guid.NewGuid();
+        var definition = FulfillmentDefinition.DigitalFile(payment.OrganizationId, payment.OfferId, asset, "material.pdf", now);
+        var execution = FulfillmentExecution.Deliver(entitlement, definition, now);
+        Assert.Equal("DIGITAL_FILE", execution.Type);
+        Assert.Equal(asset, execution.DigitalAssetId);
+        Assert.Equal("material.pdf", execution.Name);
+    }
+
     [Theory]
     [InlineData("http://example.test")]
     [InlineData("https://user:pass@example.test")]

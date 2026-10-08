@@ -104,3 +104,11 @@ export async function authorizedRequest<T>(path: string, body?: unknown, method 
   }
   return response.status === 204 ? undefined as T : response.json() as Promise<T>
 }
+
+export async function authorizedFormRequest<T>(path: string, body: FormData): Promise<T> {
+  const send = () => fetch(path, { method: 'POST', credentials: 'same-origin', headers: { 'X-Zyven-Client': 'web', ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) }, body })
+  let response = await send()
+  if (response.status === 401) { await authClient.refresh(); response = await send() }
+  if (!response.ok) { let title: string | undefined; try { title = (await response.json() as { title?: string }).title } catch { /* empty */ } throw new ApiError(response.status, title ?? 'Não foi possível enviar o arquivo.') }
+  return response.json() as Promise<T>
+}

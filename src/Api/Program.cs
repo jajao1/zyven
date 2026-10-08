@@ -1,6 +1,7 @@
 using Zyven.Api;
 using System.Net;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Http.Features;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -55,6 +56,8 @@ builder.Services.AddScoped<LedgerService>();
 builder.Services.AddScoped<SalesService>();
 builder.Services.AddScoped<BuyerAuthService>();
 builder.Services.AddScoped<BuyerPurchaseService>();
+builder.Services.AddScoped<DigitalFileService>();
+builder.Services.AddSingleton<IPrivateFileStore, LocalPrivateFileStore>();
 builder.Services.AddSingleton<IBuyerCodeDelivery, DevelopmentBuyerCodeDelivery>();
 builder.Services.AddSingleton(new BuyerCodeHasher(jwtKey));
 builder.Services.AddScoped<FulfillmentService>();
@@ -89,7 +92,8 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     // An empty list trusts every proxy, so keep a non-routable sentinel when proxying is disabled.
     if (proxies.Length == 0) options.KnownProxies.Add(IPAddress.None);
 });
-builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 131072);
+builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = DigitalFileService.MaxSize + 65536);
+builder.Services.Configure<FormOptions>(options => options.MultipartBodyLengthLimit = DigitalFileService.MaxSize + 65536);
 builder.Services.AddAuthorization(); builder.Services.AddProblemDetails(); builder.Services.AddOpenApi();
 var app = builder.Build();
 _ = app.Services.GetRequiredService<PushinPayCredentialVault>();
