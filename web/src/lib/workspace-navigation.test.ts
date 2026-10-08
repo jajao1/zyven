@@ -9,6 +9,7 @@ describe('workspace navigation', () => {
     ['/customers?organization=org', 'customers', undefined, undefined],
     ['/team?organization=org', 'team', undefined, undefined],
     ['/settings?organization=org', 'settings', undefined, undefined],
+    ['/sales?organization=org', 'sales', undefined, undefined],
   ])('parses %s', (url, view, kind, item) => {
     const parsed = readWorkspaceLocation(url)
     expect(parsed).toMatchObject({ org: 'org', view, kind, item })

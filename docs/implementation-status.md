@@ -9,21 +9,25 @@ A especificação mestre permanece a autoridade. Este mapa registra a sequência
 | 3 | Produtos e ofertas | Validada e enviada |
 | 4 | Editor simples, página pública e checkout persistente | Validada e enviada |
 | 5 | Clientes e identificação por organização | Validada e enviada |
-| 6 | Payment core, MerchantAccount e abstração PIX | Preparação parcial; integração real depende do PSP/banco |
-| 7 | Webhook assinado, confirmação e idempotência | Pendente |
-| 8 | Ledger imutável, wallet e regras de taxas | Pendente |
-| 9 | Fulfillment e entitlements | Pendente |
-| 10 | Arquivos protegidos e external link | Pendente |
+| 6 | Payment core, MerchantAccount e cobrança PIX PushinPay | Validada; ativação real depende da conta e tokens PushinPay |
+| 7 | Webhook autenticado, confirmação e idempotência | Validada e enviada |
+| 8 | Ledger imutável, wallet e regras de taxas | Validada e enviada |
+| 9 | Fulfillment e entitlements | Núcleo validado com o primeiro fluxo `EXTERNAL_LINK` |
+| 10 | Arquivos protegidos e external link | `EXTERNAL_LINK` e `DIGITAL_FILE` implementados com acesso protegido |
 | 11 | Telegram | Após primeiro fluxo completo |
 | 12 | Área de membros | Pendente |
 | 13 | Assinaturas e expiração de acesso | Pendente |
-| 14 | Dashboard, vendas e clientes | Workspace e diretório básicos antecipados; vendas dependem de pagamentos |
+| 14 | Dashboard, vendas e clientes | Vendas, detalhes, carteira e extrato implementados; gráficos históricos e exportação pendentes |
 | 15 | Cupons, order bump e upsell | Pendente |
 | 16 | Tracking, campanhas e pixels | Pendente |
 | 17 | Automações persistentes e recuperação | Pendente |
 | 18 | Afiliados e comissões idempotentes | Pendente |
 | 19 | Saques e reserva atômica | Pendente |
 | 20 | Discord e webhook de entrega | Pendente |
+
+## Área do comprador
+
+Biblioteca unificada, login por código temporário, sessões separadas da área do vendedor e recuperação de entregas `EXTERNAL_LINK` implementados. O envio transacional de e-mail deve ser configurado antes da produção.
 | 21 | Administração da plataforma | Pendente |
 | 22 | Reconciliação com provedor | Pendente |
 | 23 | Revisão e endurecimento de segurança | Pendente |

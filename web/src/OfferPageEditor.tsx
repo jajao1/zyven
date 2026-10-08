@@ -1,10 +1,35 @@
-import { useState, useId } from 'react'
+import { useState, useId, useEffect } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { pageClient, type PageContent } from './lib/page-client'
 import { Button } from './components/ui/button'
 import { Input } from './components/ui/input'
 import { Label } from './components/ui/label'
+import { ApiError } from './lib/auth-client'
+type LinkForm = { name: string; url: string }
+function FulfillmentEditor({ org, offer }: { org: string; offer: string }) {
+  const current = useQuery({ queryKey: ['organizations', org, 'external-link', offer], queryFn: () => pageClient.externalLink(org, offer), retry: false })
+  const form = useForm<LinkForm>({ defaultValues: { name: '', url: '' } })
+  useEffect(() => { if (current.data) form.reset({ name: current.data.name, url: current.data.url }) }, [current.data, form])
+  const save = useMutation({ mutationFn: (data: LinkForm) => pageClient.saveExternalLink(org, offer, data) })
+  if (current.isPending) return <p role="status">Carregando entrega...</p>
+  if (current.error && !(current.error instanceof ApiError && current.error.status === 404)) return <p role="alert">{current.error.message}</p>
+  return <form className="catalog-form page-editor" onSubmit={form.handleSubmit(data => save.mutate(data))}><h3>Entrega por link</h3><p className="field-help">O comprador verá este acesso depois que o PIX for confirmado.</p>
+    <div className="field"><Label htmlFor="fulfillment-name">Nome do acesso</Label><Input id="fulfillment-name" required maxLength={100} {...form.register('name')} /></div>
+    <div className="field"><Label htmlFor="fulfillment-url">Link HTTPS</Label><Input id="fulfillment-url" type="url" pattern="https://.*" required maxLength={2048} {...form.register('url')} /></div>
+    {save.error && <p role="alert" className="error-notice">{save.error.message}</p>}{save.isSuccess && <p role="status">Entrega salva.</p>}<Button disabled={save.isPending}>Salvar entrega</Button>
+  </form>
+}
+function DigitalFileEditor({ org, offer }: { org: string; offer: string }) {
+  const current = useQuery({ queryKey: ['organizations', org, 'digital-file', offer], queryFn: () => pageClient.digitalFile(org, offer), retry: false })
+  const upload = useMutation({ mutationFn: (file: File) => pageClient.saveDigitalFile(org, offer, file) })
+  const value = upload.data ?? current.data
+  return <section className="catalog-form page-editor"><h3>Arquivo digital protegido</h3><p className="field-help">PDF, ZIP, EPUB, planilha, PNG ou JPEG. Limite de 25 MiB. O download exige uma compra ativa.</p>
+    {value && <div className="digital-file-current"><strong>{value.name}</strong><span>{value.contentType} · {(value.size / 1024 / 1024).toFixed(2)} MiB</span></div>}
+    <div className="field"><Label htmlFor="fulfillment-file">{value ? 'Substituir arquivo' : 'Selecionar arquivo'}</Label><Input id="fulfillment-file" type="file" accept=".pdf,.zip,.epub,.xlsx,.png,.jpg,.jpeg" onChange={event => { const file = event.target.files?.[0]; if (file) upload.mutate(file) }} /></div>
+    {upload.isPending && <p role="status">Enviando arquivo...</p>}{upload.error && <p role="alert" className="error-notice">{upload.error.message}</p>}{upload.isSuccess && <p role="status">Arquivo protegido salvo.</p>}
+  </section>
+}
 function PageForm({ org, offer, initial }: { org: string; offer: string; initial: PageContent }) {
   const form = useForm<PageContent>({ defaultValues: initial })
   const [benefits, setBenefits] = useState(initial.benefits.join('\n'))
@@ -34,5 +59,6 @@ function LoadedPageEditor({ org, offer, userId }: { org: string; offer: string; 
 }
 export function OfferPageEditor({ org, offer, userId, slug }: { org: string; offer: string; userId: string; slug: string }) {
   const [open, setOpen] = useState(false)
-  return <section className="page-editor-section"><div className="catalog-actions"><Button variant="outline" onClick={() => setOpen(!open)}>{open ? 'Fechar editor da página' : 'Editar página pública'}</Button><a href={`/o/${encodeURIComponent(slug)}`} target="_blank" rel="noopener noreferrer">Ver página pública</a></div>{open && <LoadedPageEditor org={org} offer={offer} userId={userId} />}</section>
+  const [deliveryOpen, setDeliveryOpen] = useState(false)
+  return <section className="page-editor-section"><div className="catalog-actions"><Button variant="outline" onClick={() => setOpen(!open)}>{open ? 'Fechar editor da página' : 'Editar página pública'}</Button><Button variant="outline" onClick={() => setDeliveryOpen(!deliveryOpen)}>{deliveryOpen ? 'Fechar entrega' : 'Configurar entrega'}</Button><a href={`/o/${encodeURIComponent(slug)}`} target="_blank" rel="noopener noreferrer">Ver página pública</a></div>{open && <LoadedPageEditor org={org} offer={offer} userId={userId} />}{deliveryOpen && <><FulfillmentEditor org={org} offer={offer} /><DigitalFileEditor org={org} offer={offer} /></>}</section>
 }

@@ -24,6 +24,7 @@ jobs:
       Jwt__SigningKey: ci-only-signing-key-not-valid-outside-ephemeral-test-environment-2026
       Jwt__Issuer: Zyven
       Jwt__Audience: Zyven.Web
+      Payments__CredentialEncryptionKey: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
       Cors__AllowedOrigins__0: http://localhost:8088
       ASPNETCORE_ENVIRONMENT: Development
     steps:

@@ -1,6 +1,7 @@
 using Zyven.Api;
 using System.Net;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Http.Features;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -32,9 +33,34 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis") ?? throw new InvalidOperationException("ConnectionStrings:Redis is required.")));
 builder.Services.Configure<PasswordHasherOptions>(o => o.IterationCount = 210000);
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
-builder.Services.AddSingleton<IPaymentProcessor, UnconfiguredPaymentProcessor>();
+builder.Services.AddOptions<PaymentFeeOptions>()
+    .Bind(builder.Configuration.GetSection(PaymentFeeOptions.SectionName))
+    .Validate(x => x.PlatformFixedFee >= 0 && decimal.Truncate(x.PlatformFixedFee * 100) == x.PlatformFixedFee * 100, "Payments:Fees:PlatformFixedFee must be a non-negative BRL amount with at most two decimal places.")
+    .Validate(x => x.ProviderFixedFee >= 0 && decimal.Truncate(x.ProviderFixedFee * 100) == x.ProviderFixedFee * 100, "Payments:Fees:ProviderFixedFee must be a non-negative BRL amount with at most two decimal places.")
+    .ValidateOnStart();
+builder.Services.AddSingleton<PaymentFeePolicy>();
+builder.Services.AddOptions<PushinPayOptions>().Bind(builder.Configuration.GetSection(PushinPayOptions.SectionName))
+    .Validate(o => !o.Enabled || (Uri.TryCreate(o.BaseUrl, UriKind.Absolute, out var uri) && uri.Scheme == "https" && Uri.TryCreate(o.PublicApiBaseUrl, UriKind.Absolute, out var publicUri) && publicUri.Scheme == "https" && !string.IsNullOrWhiteSpace(o.PlatformAccountId) && o.MaxSplitPercent is > 0 and <= 50), "Enabled PushinPay integration requires HTTPS provider/public URLs, platform account and split limit up to 50%.").ValidateOnStart();
+builder.Services.AddSingleton(_ => new PushinPayCredentialVault(builder.Configuration["Payments:CredentialEncryptionKey"] ?? throw new InvalidOperationException("Payments:CredentialEncryptionKey is required.")));
+builder.Services.AddHttpClient<IPushinPayAccountValidator, PushinPayAccountValidator>((services, client) => { var value = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<PushinPayOptions>>().Value; client.BaseAddress = new(value.BaseUrl); client.Timeout = TimeSpan.FromSeconds(20); });
+if (builder.Configuration.GetValue<bool>("Payments:PushinPay:Enabled"))
+{
+    builder.Services.AddHttpClient<IPaymentProcessor, PushinPayPaymentProcessor>((services, client) => { var value = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<PushinPayOptions>>().Value; client.BaseAddress = new(value.BaseUrl); client.Timeout = TimeSpan.FromSeconds(20); });
+}
+else builder.Services.AddSingleton<IPaymentProcessor, UnconfiguredPaymentProcessor>();
 builder.Services.AddScoped<CatalogService>();
 builder.Services.AddScoped<PublicCheckoutService>();
+builder.Services.AddScoped<PixPaymentService>();
+builder.Services.AddScoped<PushinPayWebhookService>();
+builder.Services.AddScoped<LedgerService>();
+builder.Services.AddScoped<SalesService>();
+builder.Services.AddScoped<BuyerAuthService>();
+builder.Services.AddScoped<BuyerPurchaseService>();
+builder.Services.AddScoped<DigitalFileService>();
+builder.Services.AddSingleton<IPrivateFileStore, LocalPrivateFileStore>();
+builder.Services.AddSingleton<IBuyerCodeDelivery, DevelopmentBuyerCodeDelivery>();
+builder.Services.AddSingleton(new BuyerCodeHasher(jwtKey));
+builder.Services.AddScoped<FulfillmentService>();
 builder.Services.AddScoped<CustomerService>();
 builder.Services.AddScoped<TenantAuthorization>(); builder.Services.AddScoped<OrganizationService>();
 builder.Services.AddScoped<AuthService>(); builder.Services.AddSingleton<AuthRateGate>();
@@ -66,9 +92,11 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     // An empty list trusts every proxy, so keep a non-routable sentinel when proxying is disabled.
     if (proxies.Length == 0) options.KnownProxies.Add(IPAddress.None);
 });
-builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 131072);
+builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = DigitalFileService.MaxSize + 65536);
+builder.Services.Configure<FormOptions>(options => options.MultipartBodyLengthLimit = DigitalFileService.MaxSize + 65536);
 builder.Services.AddAuthorization(); builder.Services.AddProblemDetails(); builder.Services.AddOpenApi();
 var app = builder.Build();
+_ = app.Services.GetRequiredService<PushinPayCredentialVault>();
 app.UseExceptionHandler();
 app.UseForwardedHeaders();
 app.Use(async (context, next) =>
@@ -107,7 +135,7 @@ app.Use(async (context, next) =>
         var limit = HttpMethods.IsGet(context.Request.Method) ? 300 : 60;
         if (!await gate.Allow(HttpMethods.IsGet(context.Request.Method) ? "public-read" : "public-write", context.Connection.RemoteIpAddress?.ToString() ?? "unknown", limit)) { context.Response.StatusCode = 429; context.Response.Headers.RetryAfter = "900"; return; }
     }
-    if (HttpMethods.IsPost(context.Request.Method) && context.Request.Path.StartsWithSegments("/api/auth"))
+    if (HttpMethods.IsPost(context.Request.Method) && (context.Request.Path.StartsWithSegments("/api/auth") || context.Request.Path.StartsWithSegments("/api/buyer/auth")))
     {
         var origin = context.Request.Headers.Origin.ToString();
         if (context.Request.Headers["X-Zyven-Client"] != "web" || (origin.Length > 0 && !origins.Contains(origin, StringComparer.OrdinalIgnoreCase))) { context.Response.StatusCode = 403; return; }
@@ -160,6 +188,11 @@ app.MapOrganizations();
 app.MapCatalog();
 app.MapPublicCheckout();
 app.MapCustomers();
+app.MapLedger();
+app.MapSales();
+app.MapFulfillment();
+app.MapPushinPayWebhook();
+app.MapBuyer();
 await app.RunAsync();
 static CookieOptions CookieOptions(bool development) => new() { HttpOnly = true, Secure = !development, SameSite = SameSiteMode.Strict, Path = "/api/auth", IsEssential = true };
 static void SetCookie(HttpContext context, AuthGrant grant, bool development) { var options = CookieOptions(development); options.Expires = grant.ExpiresAt; context.Response.Cookies.Append("zyven_refresh", grant.RefreshToken, options); }

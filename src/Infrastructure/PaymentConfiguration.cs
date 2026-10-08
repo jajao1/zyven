@@ -10,7 +10,18 @@ public sealed class MerchantAccountConfiguration : IEntityTypeConfiguration<Merc
         b.HasOne<Organization>().WithMany().HasForeignKey(x => x.OrganizationId).OnDelete(DeleteBehavior.Restrict);
         b.HasIndex(x => x.OrganizationId).IsUnique();
         b.Property(x => x.Status).HasMaxLength(20).HasDefaultValue("PENDING");
-        b.ToTable(t => t.HasCheckConstraint("CK_MerchantAccounts_Status", "\"Status\" IN ('PENDING','ACTIVE','SUSPENDED','BLOCKED')"));
+        b.Property(x => x.ProviderRecipientId).HasMaxLength(200);
+        b.Property(x => x.PixKey).HasMaxLength(200); b.Property(x => x.MerchantName).HasMaxLength(25); b.Property(x => x.MerchantCity).HasMaxLength(15); b.Property(x => x.MerchantPostalCode).HasMaxLength(8);
+        b.Property(x => x.Provider).HasMaxLength(30);
+        b.Property(x => x.CredentialCiphertext).HasMaxLength(4096); b.Property(x => x.CredentialNonce).HasMaxLength(64); b.Property(x => x.CredentialTag).HasMaxLength(64); b.Property(x => x.CredentialFingerprint).HasMaxLength(12);
+        b.Property(x => x.CallbackSecretCiphertext).HasMaxLength(512); b.Property(x => x.CallbackSecretNonce).HasMaxLength(64); b.Property(x => x.CallbackSecretTag).HasMaxLength(64); b.Property(x => x.CallbackSecretHash).HasMaxLength(64);
+        b.HasIndex(x => x.CallbackSecretHash).IsUnique().HasFilter("\"CallbackSecretHash\" IS NOT NULL");
+        b.HasIndex(x => x.ProviderRecipientId).IsUnique().HasFilter("\"ProviderRecipientId\" IS NOT NULL");
+        b.ToTable(t =>
+        {
+            t.HasCheckConstraint("CK_MerchantAccounts_Status", "\"Status\" IN ('PENDING','ACTIVE','SUSPENDED','BLOCKED')");
+            t.HasCheckConstraint("CK_MerchantAccounts_PushinPayCredentials", "(\"Provider\" IS NULL AND \"CredentialCiphertext\" IS NULL AND \"CredentialNonce\" IS NULL AND \"CredentialTag\" IS NULL AND \"CredentialFingerprint\" IS NULL AND \"CallbackSecretCiphertext\" IS NULL AND \"CallbackSecretNonce\" IS NULL AND \"CallbackSecretTag\" IS NULL AND \"CallbackSecretHash\" IS NULL) OR (\"Provider\" = 'PUSHINPAY' AND \"CredentialCiphertext\" IS NOT NULL AND \"CredentialNonce\" IS NOT NULL AND \"CredentialTag\" IS NOT NULL AND length(\"CredentialFingerprint\") = 12 AND \"CallbackSecretCiphertext\" IS NOT NULL AND \"CallbackSecretNonce\" IS NOT NULL AND \"CallbackSecretTag\" IS NOT NULL AND length(\"CallbackSecretHash\") = 64)");
+        });
     }
 }
 public sealed class PaymentConfiguration : IEntityTypeConfiguration<Payment>
@@ -24,20 +35,31 @@ public sealed class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         // Migration also adds FK_Payments_CheckoutSnapshot across checkout/customer/offer/org.
         // Keeping that key database-only allows EF to update CustomerId before payment creation.
         b.Property(x => x.GrossAmount).HasPrecision(18, 2); b.Property(x => x.DiscountAmount).HasPrecision(18, 2);
-        b.Property(x => x.OrderBumpAmount).HasPrecision(18, 2); b.Property(x => x.PlatformFee).HasPrecision(18, 2); b.Property(x => x.NetAmount).HasPrecision(18, 2);
+        b.Property(x => x.OrderBumpAmount).HasPrecision(18, 2); b.Property(x => x.PlatformFee).HasPrecision(18, 2); b.Property(x => x.ProviderFee).HasPrecision(18, 2); b.Property(x => x.NetAmount).HasPrecision(18, 2);
         b.Property(x => x.Currency).HasMaxLength(3); b.Property(x => x.PaymentMethod).HasMaxLength(10); b.Property(x => x.Status).HasMaxLength(20);
         b.Property(x => x.Provider).HasMaxLength(100); b.Property(x => x.ProviderTransactionId).HasMaxLength(200); b.Property(x => x.ExternalReference).HasMaxLength(100); b.Property(x => x.EndToEndId).HasMaxLength(200);
         b.HasIndex(x => new { x.MerchantAccountId, x.ExternalReference }).IsUnique();
+        b.HasIndex(x => x.CheckoutSessionId).IsUnique();
         b.HasIndex(x => new { x.MerchantAccountId, x.Provider, x.ProviderTransactionId }).IsUnique().HasFilter("\"ProviderTransactionId\" IS NOT NULL");
         b.HasIndex(x => new { x.OrganizationId, x.CreatedAt }); b.HasIndex(x => new { x.Status, x.ExpiresAt });
         b.ToTable(t =>
         {
             t.HasCheckConstraint("CK_Payments_Status", "\"Status\" IN ('PENDING','PROCESSING','PAID','EXPIRED','FAILED','CANCELLED','REFUNDED','CHARGEBACK')");
             t.HasCheckConstraint("CK_Payments_Method", "\"PaymentMethod\" IN ('PIX','CARD')");
-            t.HasCheckConstraint("CK_Payments_Amounts", "\"GrossAmount\" > 0 AND \"DiscountAmount\" >= 0 AND \"OrderBumpAmount\" >= 0 AND \"PlatformFee\" >= 0 AND \"NetAmount\" >= 0 AND \"NetAmount\" = \"GrossAmount\" - \"PlatformFee\"");
+            t.HasCheckConstraint("CK_Payments_Amounts", "\"GrossAmount\" > 0 AND \"DiscountAmount\" >= 0 AND \"OrderBumpAmount\" >= 0 AND \"PlatformFee\" >= 0 AND \"ProviderFee\" >= 0 AND \"NetAmount\" >= 0 AND \"NetAmount\" = \"GrossAmount\" - \"PlatformFee\" - \"ProviderFee\"");
             t.HasCheckConstraint("CK_Payments_Currency", "\"Currency\" ~ '^[A-Z]{3}$'");
             t.HasCheckConstraint("CK_Payments_ProviderReference", "(\"ProviderTransactionId\" IS NULL OR (length(btrim(\"ProviderTransactionId\")) > 0 AND \"Provider\" IS NOT NULL AND length(btrim(\"Provider\")) > 0)) AND length(btrim(\"ExternalReference\")) > 0");
             t.HasCheckConstraint("CK_Payments_Expiry", "\"ExpiresAt\" > \"CreatedAt\"");
         });
+    }
+}
+
+public sealed class PaymentWebhookEventConfiguration : IEntityTypeConfiguration<PaymentWebhookEvent>
+{
+    public void Configure(EntityTypeBuilder<PaymentWebhookEvent> b)
+    {
+        b.Property(x => x.Provider).HasMaxLength(30); b.Property(x => x.ExternalEventId).HasMaxLength(200); b.Property(x => x.EventType).HasMaxLength(80); b.Property(x => x.Status).HasMaxLength(20); b.Property(x => x.PayloadHash).HasMaxLength(64);
+        b.HasIndex(x => new { x.Provider, x.ExternalEventId }).IsUnique();
+        b.HasOne<Payment>().WithMany().HasForeignKey(x => x.PaymentId).OnDelete(DeleteBehavior.Restrict);
     }
 }

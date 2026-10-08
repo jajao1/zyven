@@ -10,6 +10,13 @@ x-app-environment: &app-environment
   ASPNETCORE_ENVIRONMENT: Development
   DOTNET_ENVIRONMENT: Development
   ReverseProxy__KnownProxies__0: ${DOCKER_PROXY_IP:-172.30.0.10}
+  Payments__Fees__PlatformFixedFee: ${ZYVEN_PLATFORM_FEE:-0.50}
+  Payments__Fees__ProviderFixedFee: ${PUSHINPAY_TRANSACTION_FEE:-0.00}
+  Payments__CredentialEncryptionKey: ${PAYMENT_CREDENTIAL_ENCRYPTION_KEY:?Run scripts/setup.ps1 first}
+  Payments__PushinPay__Enabled: ${PUSHINPAY_ENABLED:-false}
+  Payments__PushinPay__BaseUrl: ${PUSHINPAY_BASE_URL:-https://api-sandbox.pushinpay.com.br/api/}
+  Payments__PushinPay__PlatformAccountId: ${PUSHINPAY_PLATFORM_ACCOUNT_ID:-}
+  Payments__PushinPay__PublicApiBaseUrl: ${PUBLIC_API_BASE_URL:-https://localhost}
 
 services:
   postgres:
@@ -51,6 +58,7 @@ services:
     build: { context: ., target: api }
     environment: *app-environment
     ports: ["127.0.0.1:${API_PORT:-5080}:8080"]
+    volumes: ["private-files:/app/private-files"]
     depends_on:
       migrate: { condition: service_completed_successfully }
     healthcheck:
@@ -87,3 +95,4 @@ networks:
 volumes:
   postgres-data:
   redis-data:
+  private-files:

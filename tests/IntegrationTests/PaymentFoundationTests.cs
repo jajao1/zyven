@@ -3,14 +3,41 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
 using Zyven.Application;
 using Zyven.Domain;
 using Zyven.Infrastructure;
+using System.Net;
+using System.Net.Http.Json;
 namespace IntegrationTests;
 
 public class PaymentFoundationTests
 {
+    private sealed class AcceptingValidator : IPushinPayAccountValidator
+    {
+        public Task<PaymentOperationError?> ValidateAsync(string token, CancellationToken ct) => Task.FromResult<PaymentOperationError?>(null);
+    }
+
+    [Fact]
+    public async Task Owner_connects_the_organization_to_a_pushinpay_account()
+    {
+        await using var app = new WebApplicationFactory<Program>().WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+        {
+            services.RemoveAll<IPushinPayAccountValidator>(); services.AddSingleton<IPushinPayAccountValidator, AcceptingValidator>();
+        }));
+        var fixture = await PublicCheckoutTests.Fixture(app); using var client = fixture.Client;
+
+        var response = await client.PutAsJsonAsync($"/api/organizations/{fixture.Org}/payment-account", new { token = "seller-token" });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var scope = app.Services.CreateScope();
+        var merchant = await scope.ServiceProvider.GetRequiredService<ZyvenDbContext>().MerchantAccounts.SingleAsync(x => x.OrganizationId == fixture.Org);
+        Assert.Equal("ACTIVE", merchant.Status);
+        Assert.Equal("PUSHINPAY", merchant.Provider);
+        Assert.NotEqual("seller-token", merchant.CredentialCiphertext);
+    }
+
     [Fact]
     public async Task Organization_creation_provisions_pending_merchant_and_runtime_cannot_charge()
     {
@@ -46,6 +73,8 @@ public class PaymentFoundationTests
             var checkout = new CheckoutSession { OrganizationId = org.Id, CustomerId = customer.Id, OfferId = offer.Id, Price = 10, Currency = "BRL", CreatedAt = now, ExpiresAt = now.AddMinutes(30) }; db.Checkouts.Add(checkout); await db.SaveChangesAsync();
             await db.Database.MigrateAsync();
             var merchants = await db.Set<MerchantAccount>().ToListAsync(); Assert.Equal(2, merchants.Count); Assert.All(merchants, m => Assert.Equal("PENDING", m.Status));
+            Assert.Equal(2, await db.LedgerAccounts.CountAsync(x => x.Code == "PAYMENT_PROCESSOR_CLEARING"));
+            Assert.False(await db.LedgerAccounts.AnyAsync(x => x.Code == "CELCOIN_CLEARING"));
             Assert.Empty(await db.Set<Payment>().ToListAsync());
             var merchant = merchants.Single(x => x.OrganizationId == org.Id); var otherMerchant = merchants.Single(x => x.OrganizationId == other.Id);
             checkout.CustomerId = customer2.Id; await db.SaveChangesAsync(); // remains mutable before a payment
@@ -66,14 +95,15 @@ public class PaymentFoundationTests
             await Rejected($"UPDATE \"Payments\" SET \"Status\" = {"UNKNOWN"} WHERE \"Id\" = {payment.Id}", PostgresErrorCodes.CheckViolation);
             await Rejected($"UPDATE \"MerchantAccounts\" SET \"Status\" = {"APPROVED"} WHERE \"Id\" = {merchant.Id}", PostgresErrorCodes.CheckViolation);
             await Rejected($"INSERT INTO \"MerchantAccounts\" (\"Id\", \"OrganizationId\", \"Status\", \"CreatedAt\", \"UpdatedAt\") VALUES ({Guid.NewGuid()}, {org.Id}, 'PENDING', {now}, {now})", PostgresErrorCodes.UniqueViolation);
-            var retry = Payment.Prepare(checkout, merchant, 1.25m, now); db.Set<Payment>().Add(retry); await db.SaveChangesAsync();
+            var checkout2 = new CheckoutSession { OrganizationId = org.Id, CustomerId = customer2.Id, OfferId = offer.Id, Price = 10, Currency = "BRL", CreatedAt = now, ExpiresAt = now.AddMinutes(30) }; db.Checkouts.Add(checkout2); await db.SaveChangesAsync();
+            var retry = Payment.Prepare(checkout2, merchant, 1.25m, now); db.Set<Payment>().Add(retry); await db.SaveChangesAsync();
             await Rejected($"UPDATE \"Payments\" SET \"ExternalReference\" = {payment.ExternalReference} WHERE \"Id\" = {retry.Id}", PostgresErrorCodes.UniqueViolation);
             await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE \"Payments\" SET \"Provider\" = 'sandbox-a', \"ProviderTransactionId\" = 'same-id' WHERE \"Id\" = {payment.Id}");
             await Rejected($"UPDATE \"Payments\" SET \"Provider\" = 'sandbox-a', \"ProviderTransactionId\" = 'same-id' WHERE \"Id\" = {retry.Id}", PostgresErrorCodes.UniqueViolation);
             await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE \"Payments\" SET \"Provider\" = 'sandbox-b', \"ProviderTransactionId\" = 'same-id' WHERE \"Id\" = {retry.Id}");
             // Exercise custom constraint teardown/recreation only in this test's disposable database.
             db.ChangeTracker.Clear(); await db.GetService<IMigrator>().MigrateAsync("20260927184003_Customers"); await db.Database.MigrateAsync();
-            Assert.Equal(1, await db.Checkouts.CountAsync()); Assert.Equal(2, await db.Set<MerchantAccount>().CountAsync());
+            Assert.Equal(2, await db.Checkouts.CountAsync()); Assert.Equal(2, await db.Set<MerchantAccount>().CountAsync());
         }
         finally
         {

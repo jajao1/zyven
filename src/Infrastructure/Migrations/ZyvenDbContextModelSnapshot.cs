@@ -103,6 +103,78 @@ namespace Infrastructure.Migrations
                     b.ToTable("Sessions");
                 });
 
+            modelBuilder.Entity("Zyven.Domain.BuyerAccessCode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset?>("ConsumedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("FailedAttempts")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("NormalizedEmail")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.HasIndex("NormalizedEmail", "CreatedAt");
+
+                    b.ToTable("BuyerAccessCodes");
+                });
+
+            modelBuilder.Entity("Zyven.Domain.BuyerSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("NormalizedEmail")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("NormalizedEmail", "ExpiresAt");
+
+                    b.ToTable("BuyerSessions");
+                });
+
             modelBuilder.Entity("Zyven.Domain.CheckoutSession", b =>
                 {
                     b.Property<Guid>("Id")
@@ -241,7 +313,52 @@ namespace Infrastructure.Migrations
                     b.ToTable("Customers");
                 });
 
-            modelBuilder.Entity("Zyven.Domain.MerchantAccount", b =>
+            modelBuilder.Entity("Zyven.Domain.DigitalAsset", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(180)
+                        .HasColumnType("character varying(180)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Sha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StorageKey")
+                        .IsUnique();
+
+                    b.HasIndex("OrganizationId", "CreatedAt");
+
+                    b.ToTable("DigitalAssets");
+                });
+
+            modelBuilder.Entity("Zyven.Domain.Entitlement", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -250,8 +367,396 @@ namespace Infrastructure.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OfferId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
+
+                    b.Property<Guid>("PaymentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("StartsAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PaymentId")
+                        .IsUnique();
+
+                    b.HasIndex("CustomerId", "OrganizationId");
+
+                    b.HasIndex("OfferId", "OrganizationId");
+
+                    b.HasIndex("PaymentId", "OrganizationId")
+                        .IsUnique();
+
+                    b.HasIndex("OrganizationId", "CustomerId", "CreatedAt");
+
+                    b.ToTable("Entitlements", t =>
+                        {
+                            t.HasCheckConstraint("CK_Entitlements_Status", "\"Status\" IN ('PENDING','ACTIVE','EXPIRED','REVOKED','FAILED')");
+
+                            t.HasCheckConstraint("CK_Entitlements_Type", "\"Type\" = 'PURCHASE'");
+                        });
+                });
+
+            modelBuilder.Entity("Zyven.Domain.FulfillmentDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DigitalAssetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ExternalUrl")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("OfferId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DigitalAssetId");
+
+                    b.HasIndex("OfferId", "OrganizationId");
+
+                    b.HasIndex("OrganizationId", "OfferId", "Type")
+                        .IsUnique();
+
+                    b.ToTable("FulfillmentDefinitions", t =>
+                        {
+                            t.HasCheckConstraint("CK_FulfillmentDefinitions_Status", "\"Status\" IN ('ACTIVE','INACTIVE')");
+
+                            t.HasCheckConstraint("CK_FulfillmentDefinitions_Type", "\"Type\" IN ('EXTERNAL_LINK','DIGITAL_FILE')");
+                        });
+                });
+
+            modelBuilder.Entity("Zyven.Domain.FulfillmentExecution", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DigitalAssetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("EntitlementId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ExternalUrl")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<Guid>("FulfillmentDefinitionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DigitalAssetId");
+
+                    b.HasIndex("EntitlementId", "FulfillmentDefinitionId")
+                        .IsUnique();
+
+                    b.HasIndex("EntitlementId", "OrganizationId");
+
+                    b.HasIndex("FulfillmentDefinitionId", "OrganizationId");
+
+                    b.HasIndex("OrganizationId", "CreatedAt");
+
+                    b.ToTable("FulfillmentExecutions", t =>
+                        {
+                            t.HasCheckConstraint("CK_FulfillmentExecutions_Status", "\"Status\" IN ('PENDING','PROCESSING','COMPLETED','FAILED')");
+
+                            t.HasCheckConstraint("CK_FulfillmentExecutions_Type", "\"Type\" IN ('EXTERNAL_LINK','DIGITAL_FILE')");
+                        });
+                });
+
+            modelBuilder.Entity("Zyven.Domain.LedgerAccount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("NormalSide")
+                        .IsRequired()
+                        .HasMaxLength(6)
+                        .HasColumnType("character varying(6)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId", "Code")
+                        .IsUnique();
+
+                    b.ToTable("LedgerAccounts", t =>
+                        {
+                            t.HasCheckConstraint("CK_LedgerAccounts_Currency", "\"Currency\" ~ '^[A-Z]{3}$'");
+
+                            t.HasCheckConstraint("CK_LedgerAccounts_NormalSide", "\"NormalSide\" IN ('DEBIT','CREDIT')");
+
+                            t.HasCheckConstraint("CK_LedgerAccounts_Type", "\"Type\" IN ('ASSET','LIABILITY','REVENUE','EXPENSE','EQUITY')");
+                        });
+                });
+
+            modelBuilder.Entity("Zyven.Domain.LedgerEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("Credit")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
+                    b.Property<decimal>("Debit")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid>("LedgerAccountId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("LedgerTransactionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LedgerAccountId");
+
+                    b.HasIndex("LedgerAccountId", "OrganizationId");
+
+                    b.HasIndex("LedgerTransactionId", "OrganizationId");
+
+                    b.HasIndex("OrganizationId", "CreatedAt", "Id");
+
+                    b.ToTable("LedgerEntries", t =>
+                        {
+                            t.HasCheckConstraint("CK_LedgerEntries_Currency", "\"Currency\" ~ '^[A-Z]{3}$'");
+
+                            t.HasCheckConstraint("CK_LedgerEntries_OneSide", "(\"Debit\" > 0 AND \"Credit\" = 0) OR (\"Credit\" > 0 AND \"Debit\" = 0)");
+                        });
+                });
+
+            modelBuilder.Entity("Zyven.Domain.LedgerTransaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PaymentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PaymentId")
+                        .IsUnique();
+
+                    b.HasIndex("PaymentId", "OrganizationId")
+                        .IsUnique();
+
+                    b.HasIndex("OrganizationId", "OccurredAt", "Id");
+
+                    b.ToTable("LedgerTransactions");
+                });
+
+            modelBuilder.Entity("Zyven.Domain.MerchantAccount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CallbackSecretCiphertext")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("CallbackSecretHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("CallbackSecretNonce")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("CallbackSecretTag")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CredentialCiphertext")
+                        .HasMaxLength(4096)
+                        .HasColumnType("character varying(4096)");
+
+                    b.Property<string>("CredentialFingerprint")
+                        .HasMaxLength(12)
+                        .HasColumnType("character varying(12)");
+
+                    b.Property<string>("CredentialNonce")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("CredentialTag")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("MerchantCity")
+                        .HasMaxLength(15)
+                        .HasColumnType("character varying(15)");
+
+                    b.Property<string>("MerchantName")
+                        .HasMaxLength(25)
+                        .HasColumnType("character varying(25)");
+
+                    b.Property<string>("MerchantPostalCode")
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PixKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Provider")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("ProviderRecipientId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -265,11 +770,21 @@ namespace Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CallbackSecretHash")
+                        .IsUnique()
+                        .HasFilter("\"CallbackSecretHash\" IS NOT NULL");
+
                     b.HasIndex("OrganizationId")
                         .IsUnique();
 
+                    b.HasIndex("ProviderRecipientId")
+                        .IsUnique()
+                        .HasFilter("\"ProviderRecipientId\" IS NOT NULL");
+
                     b.ToTable("MerchantAccounts", t =>
                         {
+                            t.HasCheckConstraint("CK_MerchantAccounts_PushinPayCredentials", "(\"Provider\" IS NULL AND \"CredentialCiphertext\" IS NULL AND \"CredentialNonce\" IS NULL AND \"CredentialTag\" IS NULL AND \"CredentialFingerprint\" IS NULL AND \"CallbackSecretCiphertext\" IS NULL AND \"CallbackSecretNonce\" IS NULL AND \"CallbackSecretTag\" IS NULL AND \"CallbackSecretHash\" IS NULL) OR (\"Provider\" = 'PUSHINPAY' AND \"CredentialCiphertext\" IS NOT NULL AND \"CredentialNonce\" IS NOT NULL AND \"CredentialTag\" IS NOT NULL AND length(\"CredentialFingerprint\") = 12 AND \"CallbackSecretCiphertext\" IS NOT NULL AND \"CallbackSecretNonce\" IS NOT NULL AND \"CallbackSecretTag\" IS NOT NULL AND length(\"CallbackSecretHash\") = 64)");
+
                             t.HasCheckConstraint("CK_MerchantAccounts_Status", "\"Status\" IN ('PENDING','ACTIVE','SUSPENDED','BLOCKED')");
                         });
                 });
@@ -509,6 +1024,10 @@ namespace Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<decimal>("ProviderFee")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
                     b.Property<string>("ProviderTransactionId")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
@@ -525,6 +1044,9 @@ namespace Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CheckoutSessionId")
+                        .IsUnique();
 
                     b.HasIndex("CheckoutSessionId", "OrganizationId");
 
@@ -547,7 +1069,7 @@ namespace Infrastructure.Migrations
 
                     b.ToTable("Payments", t =>
                         {
-                            t.HasCheckConstraint("CK_Payments_Amounts", "\"GrossAmount\" > 0 AND \"DiscountAmount\" >= 0 AND \"OrderBumpAmount\" >= 0 AND \"PlatformFee\" >= 0 AND \"NetAmount\" >= 0 AND \"NetAmount\" = \"GrossAmount\" - \"PlatformFee\"");
+                            t.HasCheckConstraint("CK_Payments_Amounts", "\"GrossAmount\" > 0 AND \"DiscountAmount\" >= 0 AND \"OrderBumpAmount\" >= 0 AND \"PlatformFee\" >= 0 AND \"ProviderFee\" >= 0 AND \"NetAmount\" >= 0 AND \"NetAmount\" = \"GrossAmount\" - \"PlatformFee\" - \"ProviderFee\"");
 
                             t.HasCheckConstraint("CK_Payments_Currency", "\"Currency\" ~ '^[A-Z]{3}$'");
 
@@ -559,6 +1081,56 @@ namespace Infrastructure.Migrations
 
                             t.HasCheckConstraint("CK_Payments_Status", "\"Status\" IN ('PENDING','PROCESSING','PAID','EXPIRED','FAILED','CANCELLED','REFUNDED','CHARGEBACK')");
                         });
+                });
+
+            modelBuilder.Entity("Zyven.Domain.PaymentWebhookEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("ExternalEventId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("PayloadHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid?>("PaymentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTimeOffset>("ReceivedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PaymentId");
+
+                    b.HasIndex("Provider", "ExternalEventId")
+                        .IsUnique();
+
+                    b.ToTable("PaymentWebhookEvents");
                 });
 
             modelBuilder.Entity("Zyven.Domain.Product", b =>
@@ -705,6 +1277,118 @@ namespace Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Zyven.Domain.DigitalAsset", b =>
+                {
+                    b.HasOne("Zyven.Domain.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Zyven.Domain.Entitlement", b =>
+                {
+                    b.HasOne("Zyven.Domain.Customer", null)
+                        .WithMany()
+                        .HasForeignKey("CustomerId", "OrganizationId")
+                        .HasPrincipalKey("Id", "OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Zyven.Domain.Offer", null)
+                        .WithMany()
+                        .HasForeignKey("OfferId", "OrganizationId")
+                        .HasPrincipalKey("Id", "OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Zyven.Domain.Payment", null)
+                        .WithOne()
+                        .HasForeignKey("Zyven.Domain.Entitlement", "PaymentId", "OrganizationId")
+                        .HasPrincipalKey("Zyven.Domain.Payment", "Id", "OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Zyven.Domain.FulfillmentDefinition", b =>
+                {
+                    b.HasOne("Zyven.Domain.DigitalAsset", null)
+                        .WithMany()
+                        .HasForeignKey("DigitalAssetId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Zyven.Domain.Offer", null)
+                        .WithMany()
+                        .HasForeignKey("OfferId", "OrganizationId")
+                        .HasPrincipalKey("Id", "OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Zyven.Domain.FulfillmentExecution", b =>
+                {
+                    b.HasOne("Zyven.Domain.DigitalAsset", null)
+                        .WithMany()
+                        .HasForeignKey("DigitalAssetId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Zyven.Domain.Entitlement", null)
+                        .WithMany()
+                        .HasForeignKey("EntitlementId", "OrganizationId")
+                        .HasPrincipalKey("Id", "OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Zyven.Domain.FulfillmentDefinition", null)
+                        .WithMany()
+                        .HasForeignKey("FulfillmentDefinitionId", "OrganizationId")
+                        .HasPrincipalKey("Id", "OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Zyven.Domain.LedgerAccount", b =>
+                {
+                    b.HasOne("Zyven.Domain.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Zyven.Domain.LedgerEntry", b =>
+                {
+                    b.HasOne("Zyven.Domain.LedgerAccount", null)
+                        .WithMany()
+                        .HasForeignKey("LedgerAccountId", "OrganizationId")
+                        .HasPrincipalKey("Id", "OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Zyven.Domain.LedgerTransaction", null)
+                        .WithMany("Entries")
+                        .HasForeignKey("LedgerTransactionId", "OrganizationId")
+                        .HasPrincipalKey("Id", "OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Zyven.Domain.LedgerTransaction", b =>
+                {
+                    b.HasOne("Zyven.Domain.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Zyven.Domain.Payment", null)
+                        .WithOne()
+                        .HasForeignKey("Zyven.Domain.LedgerTransaction", "PaymentId", "OrganizationId")
+                        .HasPrincipalKey("Zyven.Domain.Payment", "Id", "OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Zyven.Domain.MerchantAccount", b =>
                 {
                     b.HasOne("Zyven.Domain.Organization", null)
@@ -790,6 +1474,14 @@ namespace Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Zyven.Domain.PaymentWebhookEvent", b =>
+                {
+                    b.HasOne("Zyven.Domain.Payment", null)
+                        .WithMany()
+                        .HasForeignKey("PaymentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
             modelBuilder.Entity("Zyven.Domain.Product", b =>
                 {
                     b.HasOne("Zyven.Domain.Organization", null)
@@ -808,6 +1500,11 @@ namespace Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Session");
+                });
+
+            modelBuilder.Entity("Zyven.Domain.LedgerTransaction", b =>
+                {
+                    b.Navigation("Entries");
                 });
 #pragma warning restore 612, 618
         }

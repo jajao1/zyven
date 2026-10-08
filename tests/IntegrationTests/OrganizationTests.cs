@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Zyven.Infrastructure;
 using System.Net;
 using System.Net.Http.Json;
@@ -10,6 +11,11 @@ namespace IntegrationTests;
 
 public class OrganizationTests
 {
+    private sealed class AcceptingPushinPayValidator : IPushinPayAccountValidator
+    {
+        public Task<PaymentOperationError?> ValidateAsync(string token, CancellationToken ct) => Task.FromResult<PaymentOperationError?>(null);
+    }
+
     private static async Task<HttpClient> Register(WebApplicationFactory<Program> app)
     {
         var client = app.CreateClient(new() { HandleCookies = false });
@@ -26,6 +32,33 @@ public class OrganizationTests
         return await response.Content.ReadFromJsonAsync<JsonElement>();
     }
     private static async Task<string> Create(HttpClient client) => (await Json(await client.PostAsJsonAsync("/api/organizations", new { name = "Studio" }), HttpStatusCode.Created)).GetProperty("id").GetString()!;
+    [Fact]
+    public async Task Payment_account_validates_encrypts_and_never_returns_token()
+    {
+        await using var app = new WebApplicationFactory<Program>().WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+        {
+            services.RemoveAll<IPushinPayAccountValidator>();
+            services.AddSingleton<IPushinPayAccountValidator, AcceptingPushinPayValidator>();
+        }));
+        using var owner = await Register(app);
+        var id = await Create(owner);
+
+        var response = await owner.PutAsJsonAsync($"/api/organizations/{id}/payment-account", new { token = "seller-secret" });
+
+        response.EnsureSuccessStatusCode();
+        var json = await response.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("seller-secret", json);
+        var publicAccount = JsonDocument.Parse(json).RootElement;
+        Assert.Equal("PUSHINPAY", publicAccount.GetProperty("provider").GetString());
+        Assert.Equal(12, publicAccount.GetProperty("tokenFingerprint").GetString()!.Length);
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ZyvenDbContext>();
+        var stored = await db.MerchantAccounts.SingleAsync(x => x.OrganizationId == Guid.Parse(id));
+        Assert.NotEqual("seller-secret", stored.CredentialCiphertext);
+        Assert.Equal("ACTIVE", stored.Status);
+        Assert.Equal("PUSHINPAY", stored.Provider);
+        Assert.Equal(64, stored.CallbackSecretHash!.Length);
+    }
     [Fact]
     public async Task Independent_owners_cannot_read_or_mutate_each_others_organizations()
     {
