@@ -4,6 +4,8 @@ namespace Zyven.Infrastructure;
 
 public sealed class ZyvenDbContext(DbContextOptions<ZyvenDbContext> options) : DbContext(options)
 {
+    public DbSet<BuyerAccessCode> BuyerAccessCodes => Set<BuyerAccessCode>();
+    public DbSet<BuyerSession> BuyerSessions => Set<BuyerSession>();
     public DbSet<MerchantAccount> MerchantAccounts => Set<MerchantAccount>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<PaymentWebhookEvent> PaymentWebhookEvents => Set<PaymentWebhookEvent>();
@@ -27,6 +29,8 @@ public sealed class ZyvenDbContext(DbContextOptions<ZyvenDbContext> options) : D
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     protected override void OnModelCreating(ModelBuilder b)
     {
+        b.ApplyConfiguration(new BuyerAccessCodeConfiguration());
+        b.ApplyConfiguration(new BuyerSessionConfiguration());
         b.ApplyConfiguration(new MerchantAccountConfiguration());
         b.ApplyConfiguration(new PaymentConfiguration());
         b.ApplyConfiguration(new PaymentWebhookEventConfiguration());

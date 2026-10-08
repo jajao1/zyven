@@ -53,6 +53,10 @@ builder.Services.AddScoped<PixPaymentService>();
 builder.Services.AddScoped<PushinPayWebhookService>();
 builder.Services.AddScoped<LedgerService>();
 builder.Services.AddScoped<SalesService>();
+builder.Services.AddScoped<BuyerAuthService>();
+builder.Services.AddScoped<BuyerPurchaseService>();
+builder.Services.AddSingleton<IBuyerCodeDelivery, DevelopmentBuyerCodeDelivery>();
+builder.Services.AddSingleton(new BuyerCodeHasher(jwtKey));
 builder.Services.AddScoped<FulfillmentService>();
 builder.Services.AddScoped<CustomerService>();
 builder.Services.AddScoped<TenantAuthorization>(); builder.Services.AddScoped<OrganizationService>();
@@ -127,7 +131,7 @@ app.Use(async (context, next) =>
         var limit = HttpMethods.IsGet(context.Request.Method) ? 300 : 60;
         if (!await gate.Allow(HttpMethods.IsGet(context.Request.Method) ? "public-read" : "public-write", context.Connection.RemoteIpAddress?.ToString() ?? "unknown", limit)) { context.Response.StatusCode = 429; context.Response.Headers.RetryAfter = "900"; return; }
     }
-    if (HttpMethods.IsPost(context.Request.Method) && context.Request.Path.StartsWithSegments("/api/auth"))
+    if (HttpMethods.IsPost(context.Request.Method) && (context.Request.Path.StartsWithSegments("/api/auth") || context.Request.Path.StartsWithSegments("/api/buyer/auth")))
     {
         var origin = context.Request.Headers.Origin.ToString();
         if (context.Request.Headers["X-Zyven-Client"] != "web" || (origin.Length > 0 && !origins.Contains(origin, StringComparer.OrdinalIgnoreCase))) { context.Response.StatusCode = 403; return; }
@@ -184,6 +188,7 @@ app.MapLedger();
 app.MapSales();
 app.MapFulfillment();
 app.MapPushinPayWebhook();
+app.MapBuyer();
 await app.RunAsync();
 static CookieOptions CookieOptions(bool development) => new() { HttpOnly = true, Secure = !development, SameSite = SameSiteMode.Strict, Path = "/api/auth", IsEssential = true };
 static void SetCookie(HttpContext context, AuthGrant grant, bool development) { var options = CookieOptions(development); options.Expires = grant.ExpiresAt; context.Response.Cookies.Append("zyven_refresh", grant.RefreshToken, options); }

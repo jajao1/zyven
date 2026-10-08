@@ -24,6 +24,10 @@ A especificação mestre permanece a autoridade. Este mapa registra a sequência
 | 18 | Afiliados e comissões idempotentes | Pendente |
 | 19 | Saques e reserva atômica | Pendente |
 | 20 | Discord e webhook de entrega | Pendente |
+
+## Área do comprador
+
+Biblioteca unificada, login por código temporário, sessões separadas da área do vendedor e recuperação de entregas `EXTERNAL_LINK` implementados. O envio transacional de e-mail deve ser configurado antes da produção.
 | 21 | Administração da plataforma | Pendente |
 | 22 | Reconciliação com provedor | Pendente |
 | 23 | Revisão e endurecimento de segurança | Pendente |

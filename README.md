@@ -98,6 +98,8 @@ Catálogo e smoke específico: [docs/catalog.md](docs/catalog.md). Estado e depe
 
 Página pública e checkout: [docs/public-checkout.md](docs/public-checkout.md). Pagamento PIX e webhook: [docs/pushinpay-integration.md](docs/pushinpay-integration.md). Ledger e wallet: [docs/ledger.md](docs/ledger.md). Entitlements e entrega: [docs/fulfillment.md](docs/fulfillment.md).
 
+Biblioteca e autenticação do comprador: [docs/buyer-area.md](docs/buyer-area.md).
+
 Painel de vendas, detalhes de pagamento e extrato financeiro: [docs/sales-finance.md](docs/sales-finance.md).
 
 Clientes, normalização e proteção de perfil: [docs/customers.md](docs/customers.md). `./scripts/smoke-customers.ps1` verifica deduplicação, isolamento e privacidade no ambiente local.
