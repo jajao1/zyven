@@ -103,6 +103,137 @@ namespace Infrastructure.Migrations
                     b.ToTable("Sessions");
                 });
 
+            modelBuilder.Entity("Zyven.Domain.Automation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OfferId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("PublishedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("PublishedVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OfferId", "OrganizationId");
+
+                    b.HasIndex("OrganizationId", "OfferId")
+                        .IsUnique();
+
+                    b.ToTable("Automations");
+                });
+
+            modelBuilder.Entity("Zyven.Domain.AutomationExecution", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AutomationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("CurrentPosition")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("EntitlementId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("NextRunAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<long>("TelegramUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AutomationId", "OrganizationId");
+
+                    b.HasIndex("EntitlementId", "OrganizationId");
+
+                    b.HasIndex("Status", "NextRunAt");
+
+                    b.HasIndex("EntitlementId", "AutomationId", "Version")
+                        .IsUnique();
+
+                    b.ToTable("AutomationExecutions");
+                });
+
+            modelBuilder.Entity("Zyven.Domain.AutomationStep", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AutomationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ConfigurationJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AutomationId", "OrganizationId");
+
+                    b.HasIndex("AutomationId", "Version", "Position")
+                        .IsUnique();
+
+                    b.ToTable("AutomationSteps", t =>
+                        {
+                            t.HasCheckConstraint("CK_AutomationSteps_Position", "\"Position\" >= 0");
+
+                            t.HasCheckConstraint("CK_AutomationSteps_Version", "\"Version\" >= 0");
+                        });
+                });
+
             modelBuilder.Entity("Zyven.Domain.BuyerAccessCode", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1404,6 +1535,43 @@ namespace Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Zyven.Domain.Automation", b =>
+                {
+                    b.HasOne("Zyven.Domain.Offer", null)
+                        .WithMany()
+                        .HasForeignKey("OfferId", "OrganizationId")
+                        .HasPrincipalKey("Id", "OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Zyven.Domain.AutomationExecution", b =>
+                {
+                    b.HasOne("Zyven.Domain.Automation", null)
+                        .WithMany()
+                        .HasForeignKey("AutomationId", "OrganizationId")
+                        .HasPrincipalKey("Id", "OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Zyven.Domain.Entitlement", null)
+                        .WithMany()
+                        .HasForeignKey("EntitlementId", "OrganizationId")
+                        .HasPrincipalKey("Id", "OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Zyven.Domain.AutomationStep", b =>
+                {
+                    b.HasOne("Zyven.Domain.Automation", null)
+                        .WithMany()
+                        .HasForeignKey("AutomationId", "OrganizationId")
+                        .HasPrincipalKey("Id", "OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Zyven.Domain.CheckoutSession", b =>

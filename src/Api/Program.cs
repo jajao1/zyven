@@ -59,6 +59,8 @@ builder.Services.AddScoped<BuyerPurchaseService>();
 builder.Services.AddScoped<DigitalFileService>();
 builder.Services.AddScoped<TelegramIntegrationService>();
 builder.Services.AddScoped<TelegramFulfillmentService>();
+builder.Services.AddScoped<AutomationService>();
+builder.Services.AddScoped<AutomationRunner>();
 builder.Services.AddSingleton(_ => new TelegramCredentialVault(builder.Configuration["Telegram:CredentialEncryptionKey"] ?? builder.Configuration["Payments:CredentialEncryptionKey"] ?? throw new InvalidOperationException("Telegram:CredentialEncryptionKey is required.")));
 builder.Services.AddSingleton(new TelegramOptions(builder.Configuration["Telegram:PublicApiBaseUrl"] ?? ""));
 builder.Services.AddHttpClient<ITelegramClient, TelegramClient>(client => { client.BaseAddress = new("https://api.telegram.org/"); client.Timeout = TimeSpan.FromSeconds(20); });
@@ -199,6 +201,7 @@ app.MapFulfillment();
 app.MapPushinPayWebhook();
 app.MapBuyer();
 app.MapTelegram();
+app.MapAutomations();
 await app.RunAsync();
 static CookieOptions CookieOptions(bool development) => new() { HttpOnly = true, Secure = !development, SameSite = SameSiteMode.Strict, Path = "/api/auth", IsEssential = true };
 static void SetCookie(HttpContext context, AuthGrant grant, bool development) { var options = CookieOptions(development); options.Expires = grant.ExpiresAt; context.Response.Cookies.Append("zyven_refresh", grant.RefreshToken, options); }

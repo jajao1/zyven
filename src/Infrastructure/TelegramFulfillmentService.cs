@@ -6,7 +6,7 @@ using Zyven.Application;
 using Zyven.Domain;
 namespace Zyven.Infrastructure;
 
-public sealed class TelegramFulfillmentService(ZyvenDbContext db, TelegramCredentialVault vault, ITelegramClient telegram, TimeProvider time)
+public sealed class TelegramFulfillmentService(ZyvenDbContext db, TelegramCredentialVault vault, ITelegramClient telegram, AutomationRunner automations, TimeProvider time)
 {
     public async Task<TelegramLinkResponse> BuyerLink(Guid executionId, string email, CancellationToken ct)
     {
@@ -31,9 +31,10 @@ public sealed class TelegramFulfillmentService(ZyvenDbContext db, TelegramCreden
         var execution = await db.FulfillmentExecutions.SingleAsync(x => x.Id == link.FulfillmentExecutionId && x.TelegramIntegrationId == integration.Id, ct); var userId = message.GetProperty("from").GetProperty("id").GetInt64();
         var grant = await db.TelegramAccessGrants.SingleOrDefaultAsync(x => x.FulfillmentExecutionId == execution.Id, ct);
         if (grant is not null && grant.TelegramUserId != userId) { await telegram.SendMessage(Decrypt(integration), userId, "Esta compra já foi vinculada a outra conta Telegram.", ct); return; }
-        var token = Decrypt(integration); var invite = await telegram.CreateInvite(token, execution.TelegramChatId, time.GetUtcNow().AddMinutes(15), ct);
+        var token = Decrypt(integration);
         if (grant is null) db.TelegramAccessGrants.Add(new() { OrganizationId = execution.OrganizationId, FulfillmentExecutionId = execution.Id, TelegramUserId = userId, GrantedAt = time.GetUtcNow() });
-        link.ConsumedAt = time.GetUtcNow(); await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct); await telegram.SendMessage(token, userId, $"Seu acesso está liberado. Este convite é individual e expira em 15 minutos:\n{invite}", ct);
+        link.ConsumedAt = time.GetUtcNow(); await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
+        if (!await automations.Start(execution.EntitlementId, userId, ct)) { var invite = await telegram.CreateInvite(token, execution.TelegramChatId, time.GetUtcNow().AddMinutes(15), ct); await telegram.SendMessage(token, userId, $"Seu acesso está liberado. Este convite é individual e expira em 15 minutos:\n{invite}", ct); }
     }
     private string Decrypt(TelegramIntegration i) => vault.Decrypt(new(i.TokenCiphertext, i.TokenNonce, i.TokenTag, i.TokenFingerprint));
 }
