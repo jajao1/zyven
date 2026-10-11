@@ -13,6 +13,8 @@ x-app-environment: &app-environment
   Payments__Fees__PlatformFixedFee: ${ZYVEN_PLATFORM_FEE:-0.50}
   Payments__Fees__ProviderFixedFee: ${PUSHINPAY_TRANSACTION_FEE:-0.00}
   Payments__CredentialEncryptionKey: ${PAYMENT_CREDENTIAL_ENCRYPTION_KEY:?Run scripts/setup.ps1 first}
+  Telegram__CredentialEncryptionKey: ${TELEGRAM_CREDENTIAL_ENCRYPTION_KEY:?Run scripts/setup.ps1 first}
+  Telegram__PublicApiBaseUrl: ${PUBLIC_API_BASE_URL:-https://localhost}
   Payments__PushinPay__Enabled: ${PUSHINPAY_ENABLED:-false}
   Payments__PushinPay__BaseUrl: ${PUSHINPAY_BASE_URL:-https://api-sandbox.pushinpay.com.br/api/}
   Payments__PushinPay__PlatformAccountId: ${PUSHINPAY_PLATFORM_ACCOUNT_ID:-}

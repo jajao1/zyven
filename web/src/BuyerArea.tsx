@@ -40,6 +40,8 @@ function Library({ profile, logout }: { profile: BuyerProfile; logout: () => voi
 function PurchaseAction({ id }: { id: string }) {
   const detail = useQuery({ queryKey: ['buyer-purchase', id], queryFn: () => buyerClient.detail(id) })
   const item = detail.data?.items[0]
+  const telegram = useMutation({ mutationFn: (executionId: string) => buyerClient.telegramLink(executionId), onSuccess: value => { window.location.assign(value.url) } })
+  if (item?.type === 'TELEGRAM_ACCESS') return <Button disabled={telegram.isPending} onClick={() => telegram.mutate(item.id)}>{telegram.isPending ? 'Conectando...' : <>Vincular Telegram<ArrowUpRight /></>}</Button>
   return <Button asChild={!!item} disabled={!item}>{item ? <a href={item.url} target="_blank" rel="noopener noreferrer">{item.name}<ArrowUpRight /></a> : <span>{detail.isPending ? 'Carregando...' : 'Entrega indisponível'}</span>}</Button>
 }
 

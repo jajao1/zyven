@@ -12,6 +12,10 @@ if (Test-Path -LiteralPath $envPath) {
     if ($content -notmatch '(?m)^PAYMENT_CREDENTIAL_ENCRYPTION_KEY=') {
         Add-Content -LiteralPath $envPath -Value "PAYMENT_CREDENTIAL_ENCRYPTION_KEY=$(New-EncryptionKey)" -Encoding utf8
         Write-Host 'Chave de criptografia de pagamentos adicionada ao .env existente.'
+    }
+    if ($content -notmatch '(?m)^TELEGRAM_CREDENTIAL_ENCRYPTION_KEY=') {
+        Add-Content -LiteralPath $envPath -Value "TELEGRAM_CREDENTIAL_ENCRYPTION_KEY=$(New-EncryptionKey)" -Encoding utf8
+        Write-Host 'Chave de criptografia do Telegram adicionada ao .env existente.'
     } else { Write-Host 'O arquivo .env já existe; valores preservados.' }
     exit 0
 }
@@ -20,6 +24,7 @@ POSTGRES_PASSWORD=$(New-Secret)
 REDIS_PASSWORD=$(New-Secret)
 JWT_SIGNING_KEY=$(New-Secret)
 PAYMENT_CREDENTIAL_ENCRYPTION_KEY=$(New-EncryptionKey)
+TELEGRAM_CREDENTIAL_ENCRYPTION_KEY=$(New-EncryptionKey)
 WEB_PORT=8088
 API_PORT=5080
 POSTGRES_PORT=55432

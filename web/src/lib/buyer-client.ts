@@ -3,6 +3,7 @@ import { ApiError } from './auth-client'
 export interface BuyerProfile { email: string }
 export interface BuyerPurchase { id: string; offerName: string; sellerName: string; currency: string; amount: string; paidAt: string; accessStatus: string }
 export interface BuyerPurchaseDetail extends BuyerPurchase { items: { id: string; type: string; name: string; url: string; deliveredAt: string }[] }
+export interface TelegramLink { url: string; expiresAt: string }
 
 async function request<T>(path: string, body?: unknown, method = 'GET'): Promise<T> {
   const response = await fetch(`/api/buyer/${path}`, { method, credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-Zyven-Client': 'web' }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) })
@@ -17,4 +18,5 @@ export const buyerClient = {
   logout: () => request<void>('auth/logout', undefined, 'POST'),
   purchases: () => request<BuyerPurchase[]>('purchases'),
   detail: (id: string) => request<BuyerPurchaseDetail>(`purchases/${id}`),
+  telegramLink: (executionId: string) => request<TelegramLink>(`telegram/${executionId}`, undefined, 'POST'),
 }

@@ -20,3 +20,11 @@ O frontend mostra novamente a entrega quando o comprador abre a URL da oferta co
 `POST /api/organizations/{org}/offers/{offer}/fulfillments/digital-file` recebe multipart com o campo `file`. OWNER, ADMIN e OPERATOR podem enviar PDF, ZIP, EPUB, XLSX, PNG ou JPEG de até 25 MiB. Extensão e `Content-Type` não são confiados isoladamente: a API valida a assinatura binária, gera uma chave aleatória e grava o conteúdo fora da área pública.
 
 `GET` no mesmo endereço retorna somente metadados. Após o pagamento, a execução preserva o asset selecionado naquele momento. Checkout e Área do comprador recebem endpoints internos de download que revalidam pagamento e entitlement; a chave física nunca é exposta.
+
+## Telegram
+
+Cada organização conecta seu próprio bot em Configurações usando o token fornecido pelo BotFather. O token é validado com `getMe`, cifrado com AES-GCM e nunca é retornado pela API. A URL pública HTTPS configurada em `Telegram__PublicApiBaseUrl` recebe um webhook protegido por segredo.
+
+Na oferta, o vendedor adiciona uma entrega Telegram informando o ID numérico ou `@username` de um grupo, supergrupo ou canal. O bot precisa ser administrador; a API valida o chat e a permissão antes de salvar.
+
+Depois do pagamento, o comprador usa “Vincular Telegram” na Área do Comprador. O Zyven cria um código aleatório de uso único válido por 15 minutos e abre o bot. O webhook vincula a conta Telegram à execução e envia um convite individual, também válido por 15 minutos e limitado a uma entrada. Chaves únicas impedem múltiplos vínculos para a mesma compra.

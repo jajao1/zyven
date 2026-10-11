@@ -25,6 +25,7 @@ O Compose inicia PostgreSQL e Redis, aplica migrations em um processo separado, 
 | REDIS_PASSWORD | Senha local Redis |
 | JWT_SIGNING_KEY | Chave aleatória de assinatura JWT, pelo menos 32 bytes |
 | PAYMENT_CREDENTIAL_ENCRYPTION_KEY | 32 bytes aleatórios em Base64 para cifrar tokens PushinPay |
+| TELEGRAM_CREDENTIAL_ENCRYPTION_KEY | 32 bytes aleatórios em Base64 para cifrar tokens de bots |
 | PUSHINPAY_ENABLED / PUSHINPAY_BASE_URL | Ativação e ambiente da PushinPay |
 | PUSHINPAY_PLATFORM_ACCOUNT_ID | Conta Zyven que recebe o split da taxa fixa |
 | PUBLIC_API_BASE_URL | URL HTTPS pública usada nos callbacks |

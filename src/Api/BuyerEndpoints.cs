@@ -50,6 +50,11 @@ public static class BuyerEndpoints
             var download = await files.BuyerDownload(email, executionId, ct);
             return download is null ? Results.NotFound() : Results.File(download.Stream, download.ContentType, download.Name, enableRangeProcessing: true);
         });
+        group.MapPost("/telegram/{executionId:guid}", async (Guid executionId, BuyerAuthService auth, TelegramFulfillmentService telegram, HttpContext context, CancellationToken ct) =>
+        {
+            var email = await auth.Authenticate(context.Request.Cookies[CookieName], ct);
+            return email is null ? Results.Unauthorized() : Results.Ok(await telegram.BuyerLink(executionId, email, ct));
+        });
     }
 
     private static CookieOptions Options(bool development, DateTimeOffset? expires) => new() { HttpOnly = true, Secure = !development, SameSite = SameSiteMode.Lax, Path = "/api/buyer", IsEssential = true, Expires = expires };

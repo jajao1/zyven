@@ -14,7 +14,7 @@ A especificação mestre permanece a autoridade. Este mapa registra a sequência
 | 8 | Ledger imutável, wallet e regras de taxas | Validada e enviada |
 | 9 | Fulfillment e entitlements | Núcleo validado com o primeiro fluxo `EXTERNAL_LINK` |
 | 10 | Arquivos protegidos e external link | `EXTERNAL_LINK` e `DIGITAL_FILE` implementados com acesso protegido |
-| 11 | Telegram | Pendente; primeiro fluxo completo já validado |
+| 11 | Telegram | Bot próprio, grupo/canal, vínculo e convite individual implementados; smoke real depende de token e URL HTTPS |
 | 12 | Área de membros | Pendente |
 | 13 | Assinaturas e expiração de acesso | Pendente |
 | 14 | Dashboard, vendas e clientes | Vendas, detalhes, carteira e extrato implementados; gráficos históricos e exportação pendentes |

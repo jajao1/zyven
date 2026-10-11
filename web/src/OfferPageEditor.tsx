@@ -30,6 +30,15 @@ function DigitalFileEditor({ org, offer }: { org: string; offer: string }) {
     {upload.isPending && <p role="status">Enviando arquivo...</p>}{upload.error && <p role="alert" className="error-notice">{upload.error.message}</p>}{upload.isSuccess && <p role="status">Arquivo protegido salvo.</p>}
   </section>
 }
+function TelegramEditor({ org, offer }: { org: string; offer: string }) {
+  const form = useForm<{ name: string; chatId: string }>({ defaultValues: { name: 'Acessar comunidade', chatId: '' } })
+  const save = useMutation({ mutationFn: (data: { name: string; chatId: string }) => pageClient.saveTelegram(org, offer, data) })
+  return <form className="catalog-form page-editor" onSubmit={form.handleSubmit(data => save.mutate(data))}><h3>Comunidade no Telegram</h3><p className="field-help">Adicione o bot como administrador e informe o ID do grupo/canal privado ou @username.</p>
+    <div className="field"><Label htmlFor="telegram-name">Nome da comunidade</Label><Input id="telegram-name" required maxLength={100} {...form.register('name')} /></div>
+    <div className="field"><Label htmlFor="telegram-chat">Grupo ou canal</Label><Input id="telegram-chat" required maxLength={100} placeholder="-1001234567890" {...form.register('chatId')} /></div>
+    {save.error && <p role="alert" className="error-notice">{save.error.message}</p>}{save.isSuccess && <p role="status">Entrega Telegram salva.</p>}<Button disabled={save.isPending}>Salvar Telegram</Button>
+  </form>
+}
 function PageForm({ org, offer, initial }: { org: string; offer: string; initial: PageContent }) {
   const form = useForm<PageContent>({ defaultValues: initial })
   const [benefits, setBenefits] = useState(initial.benefits.join('\n'))
@@ -60,5 +69,5 @@ function LoadedPageEditor({ org, offer, userId }: { org: string; offer: string; 
 export function OfferPageEditor({ org, offer, userId, slug }: { org: string; offer: string; userId: string; slug: string }) {
   const [open, setOpen] = useState(false)
   const [deliveryOpen, setDeliveryOpen] = useState(false)
-  return <section className="page-editor-section"><div className="catalog-actions"><Button variant="outline" onClick={() => setOpen(!open)}>{open ? 'Fechar editor da página' : 'Editar página pública'}</Button><Button variant="outline" onClick={() => setDeliveryOpen(!deliveryOpen)}>{deliveryOpen ? 'Fechar entrega' : 'Configurar entrega'}</Button><a href={`/o/${encodeURIComponent(slug)}`} target="_blank" rel="noopener noreferrer">Ver página pública</a></div>{open && <LoadedPageEditor org={org} offer={offer} userId={userId} />}{deliveryOpen && <><FulfillmentEditor org={org} offer={offer} /><DigitalFileEditor org={org} offer={offer} /></>}</section>
+  return <section className="page-editor-section"><div className="catalog-actions"><Button variant="outline" onClick={() => setOpen(!open)}>{open ? 'Fechar editor da página' : 'Editar página pública'}</Button><Button variant="outline" onClick={() => setDeliveryOpen(!deliveryOpen)}>{deliveryOpen ? 'Fechar entrega' : 'Configurar entrega'}</Button><a href={`/o/${encodeURIComponent(slug)}`} target="_blank" rel="noopener noreferrer">Ver página pública</a></div>{open && <LoadedPageEditor org={org} offer={offer} userId={userId} />}{deliveryOpen && <><FulfillmentEditor org={org} offer={offer} /><DigitalFileEditor org={org} offer={offer} /><TelegramEditor org={org} offer={offer} /></>}</section>
 }

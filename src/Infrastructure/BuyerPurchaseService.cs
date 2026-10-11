@@ -25,7 +25,7 @@ public sealed class BuyerPurchaseService(ZyvenDbContext db)
                               select new { p, e, o, org }).SingleOrDefaultAsync(ct);
         if (purchase is null) return null;
         var rows = await db.FulfillmentExecutions.AsNoTracking().Where(x => x.OrganizationId == purchase.p.OrganizationId && x.EntitlementId == purchase.e.Id && x.Status == "COMPLETED").OrderBy(x => x.CreatedAt).Select(x => new { x.Id, x.Type, x.Name, x.ExternalUrl, x.CompletedAt }).ToListAsync(ct);
-        var items = rows.Select(x => new DeliveryItemResponse(x.Id, x.Type, x.Name, x.Type == "DIGITAL_FILE" ? $"/api/buyer/files/{x.Id}" : x.ExternalUrl, x.CompletedAt)).ToList();
+        var items = rows.Select(x => new DeliveryItemResponse(x.Id, x.Type, x.Name, x.Type switch { "DIGITAL_FILE" => $"/api/buyer/files/{x.Id}", "TELEGRAM_ACCESS" => $"/api/buyer/telegram/{x.Id}", _ => x.ExternalUrl }, x.CompletedAt)).ToList();
         return new(purchase.p.Id, purchase.o.Name, purchase.org.Name, purchase.p.Currency, purchase.p.GrossAmount.ToString("0.00"), purchase.p.PaidAt!.Value, items);
     }
 }

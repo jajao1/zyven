@@ -453,6 +453,14 @@ namespace Infrastructure.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<string>("TelegramChatId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid?>("TelegramIntegrationId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(30)
@@ -465,6 +473,8 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("DigitalAssetId");
 
+                    b.HasIndex("TelegramIntegrationId");
+
                     b.HasIndex("OfferId", "OrganizationId");
 
                     b.HasIndex("OrganizationId", "OfferId", "Type")
@@ -474,7 +484,7 @@ namespace Infrastructure.Migrations
                         {
                             t.HasCheckConstraint("CK_FulfillmentDefinitions_Status", "\"Status\" IN ('ACTIVE','INACTIVE')");
 
-                            t.HasCheckConstraint("CK_FulfillmentDefinitions_Type", "\"Type\" IN ('EXTERNAL_LINK','DIGITAL_FILE')");
+                            t.HasCheckConstraint("CK_FulfillmentDefinitions_Type", "\"Type\" IN ('EXTERNAL_LINK','DIGITAL_FILE','TELEGRAM_ACCESS')");
                         });
                 });
 
@@ -517,6 +527,13 @@ namespace Infrastructure.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<string>("TelegramChatId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("TelegramIntegrationId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(30)
@@ -525,6 +542,8 @@ namespace Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("DigitalAssetId");
+
+                    b.HasIndex("TelegramIntegrationId");
 
                     b.HasIndex("EntitlementId", "FulfillmentDefinitionId")
                         .IsUnique();
@@ -539,7 +558,7 @@ namespace Infrastructure.Migrations
                         {
                             t.HasCheckConstraint("CK_FulfillmentExecutions_Status", "\"Status\" IN ('PENDING','PROCESSING','COMPLETED','FAILED')");
 
-                            t.HasCheckConstraint("CK_FulfillmentExecutions_Type", "\"Type\" IN ('EXTERNAL_LINK','DIGITAL_FILE')");
+                            t.HasCheckConstraint("CK_FulfillmentExecutions_Type", "\"Type\" IN ('EXTERNAL_LINK','DIGITAL_FILE','TELEGRAM_ACCESS')");
                         });
                 });
 
@@ -1204,6 +1223,142 @@ namespace Infrastructure.Migrations
                     b.ToTable("RefreshTokens");
                 });
 
+            modelBuilder.Entity("Zyven.Domain.TelegramAccessGrant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FulfillmentExecutionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("GrantedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<long>("TelegramUserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FulfillmentExecutionId")
+                        .IsUnique();
+
+                    b.HasIndex("OrganizationId", "TelegramUserId");
+
+                    b.ToTable("TelegramAccessGrants");
+                });
+
+            modelBuilder.Entity("Zyven.Domain.TelegramIntegration", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("BotId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("BotName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("BotUsername")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("TokenCiphertext")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TokenFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("character varying(12)");
+
+                    b.Property<string>("TokenNonce")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TokenTag")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("WebhookSecretHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId")
+                        .IsUnique();
+
+                    b.ToTable("TelegramIntegrations");
+                });
+
+            modelBuilder.Entity("Zyven.Domain.TelegramLinkToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ConsumedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("FulfillmentExecutionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Hash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.HasIndex("FulfillmentExecutionId");
+
+                    b.HasIndex("Hash")
+                        .IsUnique();
+
+                    b.ToTable("TelegramLinkTokens");
+                });
+
             modelBuilder.Entity("Zyven.Domain.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1317,6 +1472,11 @@ namespace Infrastructure.Migrations
                         .HasForeignKey("DigitalAssetId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("Zyven.Domain.TelegramIntegration", null)
+                        .WithMany()
+                        .HasForeignKey("TelegramIntegrationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Zyven.Domain.Offer", null)
                         .WithMany()
                         .HasForeignKey("OfferId", "OrganizationId")
@@ -1330,6 +1490,11 @@ namespace Infrastructure.Migrations
                     b.HasOne("Zyven.Domain.DigitalAsset", null)
                         .WithMany()
                         .HasForeignKey("DigitalAssetId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Zyven.Domain.TelegramIntegration", null)
+                        .WithMany()
+                        .HasForeignKey("TelegramIntegrationId")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Zyven.Domain.Entitlement", null)
@@ -1500,6 +1665,33 @@ namespace Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Session");
+                });
+
+            modelBuilder.Entity("Zyven.Domain.TelegramAccessGrant", b =>
+                {
+                    b.HasOne("Zyven.Domain.FulfillmentExecution", null)
+                        .WithMany()
+                        .HasForeignKey("FulfillmentExecutionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Zyven.Domain.TelegramIntegration", b =>
+                {
+                    b.HasOne("Zyven.Domain.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Zyven.Domain.TelegramLinkToken", b =>
+                {
+                    b.HasOne("Zyven.Domain.FulfillmentExecution", null)
+                        .WithMany()
+                        .HasForeignKey("FulfillmentExecutionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Zyven.Domain.LedgerTransaction", b =>

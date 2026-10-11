@@ -4,6 +4,9 @@ namespace Zyven.Infrastructure;
 
 public sealed class ZyvenDbContext(DbContextOptions<ZyvenDbContext> options) : DbContext(options)
 {
+    public DbSet<TelegramIntegration> TelegramIntegrations => Set<TelegramIntegration>();
+    public DbSet<TelegramLinkToken> TelegramLinkTokens => Set<TelegramLinkToken>();
+    public DbSet<TelegramAccessGrant> TelegramAccessGrants => Set<TelegramAccessGrant>();
     public DbSet<BuyerAccessCode> BuyerAccessCodes => Set<BuyerAccessCode>();
     public DbSet<BuyerSession> BuyerSessions => Set<BuyerSession>();
     public DbSet<DigitalAsset> DigitalAssets => Set<DigitalAsset>();
@@ -30,6 +33,7 @@ public sealed class ZyvenDbContext(DbContextOptions<ZyvenDbContext> options) : D
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     protected override void OnModelCreating(ModelBuilder b)
     {
+        b.ApplyConfiguration(new TelegramIntegrationConfiguration()); b.ApplyConfiguration(new TelegramLinkTokenConfiguration()); b.ApplyConfiguration(new TelegramAccessGrantConfiguration());
         b.ApplyConfiguration(new BuyerAccessCodeConfiguration());
         b.ApplyConfiguration(new BuyerSessionConfiguration());
         b.ApplyConfiguration(new DigitalAssetConfiguration());
