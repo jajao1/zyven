@@ -41,7 +41,7 @@ O Compose é um ambiente de **Development**. Em produção, configurar TLS no pr
 
 `src/Domain` contém entidades; `src/Application`, contratos e validação; `src/Infrastructure`, persistência e serviços; `src/Api`, HTTP; `src/Workers`, processamento Hangfire. `web` usa React, TypeScript, Vite, Tailwind, componentes shadcn/ui, TanStack Query, React Hook Form e Zod. Recharts está disponível para a fase de dashboard.
 
-O núcleo comercial segue **Product → Offer → Checkout → Payment → Entitlement → Fulfillment**. O primeiro fluxo completo está implementado com cobrança PIX PushinPay, confirmação verificada por webhook, ledger, entitlement e entrega `EXTERNAL_LINK`. Veja [`docs/organizations.md`](docs/organizations.md) para endpoints e permissões. Nenhum identificador de organização enviado pelo cliente confere acesso por si só. Cada vendedor informa o token da própria conta PushinPay; arquivos protegidos, integrações adicionais e saques permanecem pendentes.
+O núcleo comercial segue **Product → Offer → Checkout → Payment → Entitlement → Fulfillment**. O primeiro fluxo completo está implementado com cobrança PIX PushinPay, confirmação verificada por webhook, ledger, entitlement e entregas `EXTERNAL_LINK` e `DIGITAL_FILE`. Veja [`docs/organizations.md`](docs/organizations.md) para endpoints e permissões. Nenhum identificador de organização enviado pelo cliente confere acesso por si só. Cada vendedor informa o token da própria conta PushinPay; Telegram, área de membros, integrações adicionais e saques permanecem pendentes. O panorama completo está em [`docs/project-scope.md`](docs/project-scope.md).
 
 ## Autenticação
 
