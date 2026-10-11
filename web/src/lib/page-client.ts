@@ -9,6 +9,9 @@ export interface Delivery { entitlementId: string; status: string; items: { id: 
 export interface ExternalLinkFulfillment { id: string; type: 'EXTERNAL_LINK'; name: string; url: string; status: string }
 export interface DigitalFileFulfillment { id: string; type: 'DIGITAL_FILE'; name: string; contentType: string; size: number; status: string }
 export interface TelegramFulfillment { id: string; type: 'TELEGRAM_ACCESS'; name: string; chatId: string; botUsername: string; status: string }
+export type AutomationStepType = 'SEND_TELEGRAM_MESSAGE' | 'SEND_OFFER' | 'CHECKOUT' | 'CONDITION' | 'WAIT' | 'TELEGRAM_ACCESS' | 'END'
+export interface AutomationStep { id?: string; position?: number; type: AutomationStepType; text?: string | null; url?: string | null; waitMinutes?: number | null; condition?: string | null }
+export interface Automation { id: string; publishedVersion: number; publishedAt?: string | null; steps: AutomationStep[] }
 async function request<T>(url: string, body?: unknown, method?: string): Promise<T> {
   const actualMethod = method ?? (body === undefined ? 'GET' : 'POST')
   const response = await fetch(url, { method: actualMethod, credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-Zyven-Client': 'web' }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) })
@@ -24,6 +27,9 @@ export const pageClient = {
   saveDigitalFile: (org: string, id: string, file: File) => { const body = new FormData(); body.append('file', file); return authorizedFormRequest<DigitalFileFulfillment>(`/api/organizations/${org}/offers/${id}/fulfillments/digital-file`, body) },
   telegram: (org: string, id: string) => authorizedRequest<TelegramFulfillment>(`/api/organizations/${org}/offers/${id}/fulfillments/telegram`),
   saveTelegram: (org: string, id: string, data: { name: string; chatId: string }) => authorizedRequest<TelegramFulfillment>(`/api/organizations/${org}/offers/${id}/fulfillments/telegram`, data, 'PUT'),
+  automation: (org: string, id: string) => authorizedRequest<Automation>(`/api/organizations/${org}/offers/${id}/automation`),
+  saveAutomation: (org: string, id: string, steps: AutomationStep[]) => authorizedRequest<Automation>(`/api/organizations/${org}/offers/${id}/automation`, { steps }, 'PUT'),
+  publishAutomation: (org: string, id: string) => authorizedRequest<Automation>(`/api/organizations/${org}/offers/${id}/automation/publish`, undefined, 'POST'),
   offer: (slug: string) => request<PublicOffer>(`/api/public/offers/${encodeURIComponent(slug)}`),
   create: (slug: string, data: BuyerInput) => request<Checkout>(`/api/public/offers/${encodeURIComponent(slug)}/checkouts`, data),
   checkout: (id: string) => request<Checkout>(`/api/public/checkouts/${encodeURIComponent(id)}`),

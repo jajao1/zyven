@@ -20,7 +20,7 @@ A especificação mestre permanece a autoridade. Este mapa registra a sequência
 | 14 | Dashboard, vendas e clientes | Vendas, detalhes, carteira e extrato implementados; gráficos históricos e exportação pendentes |
 | 15 | Cupons, order bump e upsell | Pendente |
 | 16 | Tracking, campanhas e pixels | Pendente |
-| 17 | Automações persistentes e recuperação | Pendente |
+| 17 | Automações persistentes e recuperação | Funil Telegram por oferta implementado com rascunho, publicação versionada, mensagens, oferta/checkout, condições, espera persistente e entrega; canais adicionais pendentes |
 | 18 | Afiliados e comissões idempotentes | Pendente |
 | 19 | Saques e reserva atômica | Pendente |
 | 20 | Discord e webhook de entrega | Pendente |

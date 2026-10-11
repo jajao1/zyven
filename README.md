@@ -42,7 +42,7 @@ O Compose é um ambiente de **Development**. Em produção, configurar TLS no pr
 
 `src/Domain` contém entidades; `src/Application`, contratos e validação; `src/Infrastructure`, persistência e serviços; `src/Api`, HTTP; `src/Workers`, processamento Hangfire. `web` usa React, TypeScript, Vite, Tailwind, componentes shadcn/ui, TanStack Query, React Hook Form e Zod. Recharts está disponível para a fase de dashboard.
 
-O núcleo comercial segue **Product → Offer → Checkout → Payment → Entitlement → Fulfillment**. O primeiro fluxo completo está implementado com cobrança PIX PushinPay, confirmação verificada por webhook, ledger, entitlement e entregas `EXTERNAL_LINK` e `DIGITAL_FILE`. Veja [`docs/organizations.md`](docs/organizations.md) para endpoints e permissões. Nenhum identificador de organização enviado pelo cliente confere acesso por si só. Cada vendedor informa o token da própria conta PushinPay; Telegram, área de membros, integrações adicionais e saques permanecem pendentes. O panorama completo está em [`docs/project-scope.md`](docs/project-scope.md).
+O núcleo comercial segue **Product → Offer → Checkout → Payment → Entitlement → Fulfillment**. O fluxo completo inclui cobrança PIX PushinPay, confirmação verificada por webhook, ledger, entitlement e entregas `EXTERNAL_LINK`, `DIGITAL_FILE` e `TELEGRAM_ACCESS`. Cada organização conecta seu próprio bot Telegram. Ofertas podem publicar um funil versionado de mensagens, links, condições, esperas persistentes e liberação de acesso. Veja [`docs/organizations.md`](docs/organizations.md) para endpoints e permissões. Nenhum identificador de organização enviado pelo cliente confere acesso por si só. O panorama completo está em [`docs/project-scope.md`](docs/project-scope.md).
 
 ## Autenticação
 
@@ -93,7 +93,7 @@ Para desenvolver o frontend com a API do Compose: `cd web`, `npm ci`, `npm run d
 
 ## Evolução
 
-Os fluxos `EXTERNAL_LINK` e `DIGITAL_FILE` são liberados após pagamento confirmado no servidor. Telegram, Discord e área de membros permanecem expansões. A fonte financeira é o ledger imutável, nunca um saldo editável.
+Os fluxos `EXTERNAL_LINK`, `DIGITAL_FILE` e `TELEGRAM_ACCESS` são liberados após pagamento confirmado no servidor. O funil Telegram publicado é executado pela versão capturada na compra e esperas são retomadas pelo Worker. Discord e área de membros permanecem expansões. A fonte financeira é o ledger imutável, nunca um saldo editável.
 
 Catálogo e smoke específico: [docs/catalog.md](docs/catalog.md). Estado e dependências: [docs/implementation-status.md](docs/implementation-status.md).
 
@@ -104,5 +104,7 @@ Biblioteca e autenticação do comprador: [docs/buyer-area.md](docs/buyer-area.m
 Painel de vendas, detalhes de pagamento e extrato financeiro: [docs/sales-finance.md](docs/sales-finance.md).
 
 Clientes, normalização e proteção de perfil: [docs/customers.md](docs/customers.md). `./scripts/smoke-customers.ps1` verifica deduplicação, isolamento e privacidade no ambiente local.
+
+Funil configurável de mensagens Telegram: [docs/automations.md](docs/automations.md).
 
 A base de pagamentos inclui MerchantAccount, taxas fixas configuráveis, tokens PushinPay cifrados e restrições financeiras/tenant no banco. Sem configuração, o processador retorna indisponível de forma segura. Escopo e dependências: [docs/payment-foundation.md](docs/payment-foundation.md). Smoke local: `./scripts/smoke-payment-foundation.ps1`.

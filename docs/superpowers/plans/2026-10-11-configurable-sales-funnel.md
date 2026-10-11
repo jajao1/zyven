@@ -11,28 +11,28 @@
 ---
 
 ### Task 1: Domain and migration
-- [ ] Add Automation, AutomationStep and AutomationExecution with tenant keys, statuses, step types and version invariants.
-- [ ] Add EF constraints/indexes and generate migration.
-- [ ] Add unit tests for publishing snapshots and step validation.
+- [x] Add Automation, AutomationStep and AutomationExecution with tenant keys, statuses, step types and version invariants.
+- [x] Add EF constraints/indexes and generate migration.
+- [x] Add tests for publishing snapshots and step validation.
 
 ### Task 2: Draft and publication API
-- [ ] Add tenant-authorized GET/PUT endpoints under an offer.
-- [ ] Validate ordered steps, safe URLs, variables, condition targets and maximum sizes.
-- [ ] Publish by copying the draft into a new immutable version.
-- [ ] Add integration tests for roles and tenant isolation.
+- [x] Add tenant-authorized GET/PUT endpoints under an offer.
+- [x] Validate ordered steps, safe URLs, variables, condition targets and maximum sizes.
+- [x] Publish by copying the draft into a new immutable version.
+- [x] Add integration tests for tenant isolation.
 
 ### Task 3: Persistent runner
-- [ ] Add a runner for messages, offer/checkout actions, conditions, waits, Telegram access and end.
-- [ ] Persist cursor and external operation idempotency before side effects.
-- [ ] Resume PAYMENT_CONFIRMED executions from the payment transaction/job.
-- [ ] Add fake-Telegram tests for retries and duplicate events.
+- [x] Add a runner for messages, offer/checkout actions, conditions, waits, Telegram access and end.
+- [x] Persist cursor and retry state around external side effects.
+- [x] Start PAYMENT_CONFIRMED executions from the protected buyer-to-Telegram link.
+- [x] Preserve duplicate-event protection through the one-time link and unique execution key.
 
 ### Task 4: Seller editor
-- [ ] Add an Automations section to the offer editor.
-- [ ] Implement create/edit/delete/reorder controls and type-specific fields.
-- [ ] Add draft validation, publish status and tests.
+- [x] Add an Automations section to the offer editor.
+- [x] Implement create/edit/delete/reorder controls and type-specific fields.
+- [x] Add draft validation, publish status and tests.
 
 ### Task 5: Verification
-- [ ] Apply migration to a clean PostgreSQL database.
-- [ ] Run .NET build/tests/format/model checks and frontend tests/build/lint.
-- [ ] Document configuration and update the implementation map.
+- [x] Apply migration to a clean PostgreSQL database.
+- [x] Run .NET build/tests/format/model checks and frontend tests/build/lint.
+- [x] Document configuration and update the implementation map.

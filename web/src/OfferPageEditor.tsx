@@ -1,7 +1,7 @@
 import { useState, useId, useEffect } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { useForm, useFieldArray } from 'react-hook-form'
-import { pageClient, type PageContent } from './lib/page-client'
+import { pageClient, type PageContent, type AutomationStep, type AutomationStepType } from './lib/page-client'
 import { Button } from './components/ui/button'
 import { Input } from './components/ui/input'
 import { Label } from './components/ui/label'
@@ -39,6 +39,30 @@ function TelegramEditor({ org, offer }: { org: string; offer: string }) {
     {save.error && <p role="alert" className="error-notice">{save.error.message}</p>}{save.isSuccess && <p role="status">Entrega Telegram salva.</p>}<Button disabled={save.isPending}>Salvar Telegram</Button>
   </form>
 }
+const stepNames: Record<AutomationStepType, string> = { SEND_TELEGRAM_MESSAGE: 'Enviar mensagem', SEND_OFFER: 'Apresentar oferta', CHECKOUT: 'Enviar checkout', CONDITION: 'Verificar condição', WAIT: 'Aguardar', TELEGRAM_ACCESS: 'Liberar acesso Telegram', END: 'Encerrar funil' }
+function AutomationEditor({ org, offer }: { org: string; offer: string }) {
+  const current = useQuery({ queryKey: ['organizations', org, 'automation', offer], queryFn: () => pageClient.automation(org, offer), retry: false })
+  const [editedSteps, setSteps] = useState<AutomationStep[] | null>(null)
+  const steps = editedSteps ?? (current.data?.steps.length ? current.data.steps : [{ type: 'SEND_TELEGRAM_MESSAGE', text: 'Olá, {{buyer_name}}! Sua compra foi confirmada.' }, { type: 'END' }]) as AutomationStep[]
+  const save = useMutation({ mutationFn: () => pageClient.saveAutomation(org, offer, steps) })
+  const publish = useMutation({ mutationFn: async () => { await pageClient.saveAutomation(org, offer, steps); return pageClient.publishAutomation(org, offer) }, onSuccess: data => current.refetch().then(() => data) })
+  const change = (index: number, patch: Partial<AutomationStep>) => setSteps(steps.map((step, position) => position === index ? { ...step, ...patch } : step))
+  const move = (index: number, direction: -1 | 1) => { const target = index + direction; if (target < 0 || target >= steps.length) return; const copy = [...steps]; [copy[index], copy[target]] = [copy[target], copy[index]]; setSteps(copy) }
+  if (current.isPending) return <p role="status">Carregando funil...</p>
+  if (current.error) return <p role="alert">{current.error.message}</p>
+  return <section className="catalog-form page-editor"><div><h3>Funil de mensagens</h3><p className="field-help">Defina a sequência que o seu bot envia ao comprador. Use {'{{buyer_name}}'}, {'{{buyer_email}}'}, {'{{offer_name}}'} ou {'{{checkout_url}}'} nas mensagens.</p>{current.data?.publishedVersion ? <p className="field-help">Versão {current.data.publishedVersion} publicada.</p> : <p className="field-help">Ainda não publicado.</p>}</div>
+    {steps.map((step, index) => <fieldset className="page-block" key={`${index}-${step.id ?? 'new'}`}><legend>{index + 1}. {stepNames[step.type]}</legend>
+      <Label htmlFor={`automation-type-${index}`}>Ação</Label><select id={`automation-type-${index}`} value={step.type} onChange={event => change(index, { type: event.target.value as AutomationStepType, text: '', url: '', waitMinutes: null, condition: null })}>{Object.entries(stepNames).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
+      {step.type === 'SEND_TELEGRAM_MESSAGE' && <><Label htmlFor={`automation-text-${index}`}>Mensagem</Label><textarea id={`automation-text-${index}`} required maxLength={4000} value={step.text ?? ''} onChange={event => change(index, { text: event.target.value })} /></>}
+      {(step.type === 'SEND_OFFER' || step.type === 'CHECKOUT') && <><Label htmlFor={`automation-url-${index}`}>URL opcional</Label><Input id={`automation-url-${index}`} type="url" pattern="https://.*" placeholder="Usa a página desta oferta quando vazio" value={step.url ?? ''} onChange={event => change(index, { url: event.target.value })} /></>}
+      {step.type === 'WAIT' && <><Label htmlFor={`automation-wait-${index}`}>Minutos</Label><Input id={`automation-wait-${index}`} type="number" min={1} max={43200} value={step.waitMinutes ?? 1} onChange={event => change(index, { waitMinutes: Number(event.target.value) })} /></>}
+      {step.type === 'CONDITION' && <><Label htmlFor={`automation-condition-${index}`}>Continuar somente se</Label><select id={`automation-condition-${index}`} value={step.condition ?? 'PAYMENT_CONFIRMED'} onChange={event => change(index, { condition: event.target.value })}><option value="PAYMENT_CONFIRMED">Pagamento confirmado</option><option value="ENTITLEMENT_ACTIVE">Acesso ativo</option></select></>}
+      <div className="catalog-actions"><Button type="button" variant="outline" disabled={index === 0} onClick={() => move(index, -1)}>Subir</Button><Button type="button" variant="outline" disabled={index === steps.length - 1} onClick={() => move(index, 1)}>Descer</Button><Button type="button" variant="outline" disabled={steps.length === 1} onClick={() => setSteps(steps.filter((_, position) => position !== index))}>Remover</Button></div>
+    </fieldset>)}
+    <div className="catalog-actions"><Button type="button" variant="outline" disabled={steps.length >= 30} onClick={() => setSteps([...steps, { type: 'SEND_TELEGRAM_MESSAGE', text: '' }])}>Adicionar etapa</Button><Button type="button" variant="outline" disabled={save.isPending} onClick={() => save.mutate()}>Salvar rascunho</Button><Button type="button" disabled={publish.isPending} onClick={() => publish.mutate()}>Publicar funil</Button></div>
+    {(save.error || publish.error) && <p role="alert" className="error-notice">{(save.error ?? publish.error)?.message}</p>}{save.isSuccess && !publish.isPending && <p role="status">Rascunho salvo.</p>}{publish.isSuccess && <p role="status">Funil publicado com sucesso.</p>}
+  </section>
+}
 function PageForm({ org, offer, initial }: { org: string; offer: string; initial: PageContent }) {
   const form = useForm<PageContent>({ defaultValues: initial })
   const [benefits, setBenefits] = useState(initial.benefits.join('\n'))
@@ -69,5 +93,6 @@ function LoadedPageEditor({ org, offer, userId }: { org: string; offer: string; 
 export function OfferPageEditor({ org, offer, userId, slug }: { org: string; offer: string; userId: string; slug: string }) {
   const [open, setOpen] = useState(false)
   const [deliveryOpen, setDeliveryOpen] = useState(false)
-  return <section className="page-editor-section"><div className="catalog-actions"><Button variant="outline" onClick={() => setOpen(!open)}>{open ? 'Fechar editor da página' : 'Editar página pública'}</Button><Button variant="outline" onClick={() => setDeliveryOpen(!deliveryOpen)}>{deliveryOpen ? 'Fechar entrega' : 'Configurar entrega'}</Button><a href={`/o/${encodeURIComponent(slug)}`} target="_blank" rel="noopener noreferrer">Ver página pública</a></div>{open && <LoadedPageEditor org={org} offer={offer} userId={userId} />}{deliveryOpen && <><FulfillmentEditor org={org} offer={offer} /><DigitalFileEditor org={org} offer={offer} /><TelegramEditor org={org} offer={offer} /></>}</section>
+  const [automationOpen, setAutomationOpen] = useState(false)
+  return <section className="page-editor-section"><div className="catalog-actions"><Button variant="outline" onClick={() => setOpen(!open)}>{open ? 'Fechar editor da página' : 'Editar página pública'}</Button><Button variant="outline" onClick={() => setDeliveryOpen(!deliveryOpen)}>{deliveryOpen ? 'Fechar entrega' : 'Configurar entrega'}</Button><Button variant="outline" onClick={() => setAutomationOpen(!automationOpen)}>{automationOpen ? 'Fechar funil' : 'Editar funil de mensagens'}</Button><a href={`/o/${encodeURIComponent(slug)}`} target="_blank" rel="noopener noreferrer">Ver página pública</a></div>{open && <LoadedPageEditor org={org} offer={offer} userId={userId} />}{deliveryOpen && <><FulfillmentEditor org={org} offer={offer} /><DigitalFileEditor org={org} offer={offer} /><TelegramEditor org={org} offer={offer} /></>}{automationOpen && <AutomationEditor org={org} offer={offer} />}</section>
 }
