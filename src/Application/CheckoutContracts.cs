@@ -22,7 +22,7 @@ public sealed record PageContent
     public CheckoutField[] Fields { get; init; } = [];
 }
 public sealed record PublicOffer(string Slug, string Name, string ProductName, string Price, string Currency, string BillingType, PageContent Page);
-public sealed record CheckoutInput(string Name, string Email, string? Phone, string? Document, Dictionary<string, string>? Fields);
+public sealed record CheckoutInput(string Name, string Email, string? Phone, string? Document, Dictionary<string, string>? Fields, string? RecoveryReference = null);
 public sealed record CheckoutResponse(Guid Id, string Status, string Price, string Currency, DateTimeOffset ExpiresAt, string Name, string Email, string? Phone, string? Document, Dictionary<string, string> Fields, string OfferSlug);
 public sealed class PageContentValidator : AbstractValidator<PageContent>
 {

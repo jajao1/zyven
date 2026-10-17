@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Zyven.Domain;
 namespace Zyven.Infrastructure;
 
-public sealed class AutomationRunner(ZyvenDbContext db, TelegramCredentialVault vault, ITelegramClient telegram, TelegramOptions options, TimeProvider time)
+public sealed class AutomationRunner(ZyvenDbContext db, TelegramCredentialVault vault, ITelegramClient telegram, TelegramOptions options, BotCheckoutReferenceService botReferences, TimeProvider time)
 {
     private sealed record StepConfig(string? Text, string? Url, int? WaitMinutes, string? Condition);
 
@@ -45,7 +45,7 @@ public sealed class AutomationRunner(ZyvenDbContext db, TelegramCredentialVault 
             // failure is resumed by the worker instead of consuming the buyer's one-time webhook.
             execution.Status = "WAITING"; execution.NextRunAt = time.GetUtcNow().AddMinutes(1); execution.UpdatedAt = time.GetUtcNow(); await db.SaveChangesAsync(ct);
             if (step.Type == "SEND_TELEGRAM_MESSAGE") await telegram.SendMessage(token, execution.TelegramUserId, Expand(config.Text!, context.Customer.Name, context.Customer.Email, context.Offer.Name, OfferUrl(config.Url, context.Offer.Slug)), ct);
-            else if (step.Type is "SEND_OFFER" or "CHECKOUT") await telegram.SendMessage(token, execution.TelegramUserId, step.Type == "SEND_OFFER" ? $"Conheça a oferta {context.Offer.Name}:\n{OfferUrl(config.Url, context.Offer.Slug)}" : $"Continue para o checkout:\n{OfferUrl(config.Url, context.Offer.Slug)}", ct);
+            else if (step.Type is "SEND_OFFER" or "CHECKOUT") { var url = OfferUrl(config.Url, context.Offer.Slug); if (string.IsNullOrWhiteSpace(config.Url)) { var reference = await botReferences.Create(execution.OrganizationId, context.Offer.Id, context.Integration.Id, execution.TelegramUserId, ct); url = $"{url}?r={reference}"; } await telegram.SendMessage(token, execution.TelegramUserId, step.Type == "SEND_OFFER" ? $"Conheça a oferta {context.Offer.Name}:\n{url}" : $"Continue para o checkout:\n{url}", ct); }
             else if (step.Type == "TELEGRAM_ACCESS" && fulfillment is not null) { var invite = await telegram.CreateInvite(token, fulfillment.TelegramChatId, time.GetUtcNow().AddMinutes(15), ct); await telegram.SendMessage(token, execution.TelegramUserId, $"Seu acesso está liberado. Este convite é individual e expira em 15 minutos:\n{invite}", ct); }
             execution.CurrentPosition++; execution.Status = "RUNNING"; execution.NextRunAt = null; execution.UpdatedAt = time.GetUtcNow(); await db.SaveChangesAsync(ct);
         }

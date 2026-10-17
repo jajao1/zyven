@@ -6,7 +6,7 @@ using Zyven.Application;
 using Zyven.Domain;
 namespace Zyven.Infrastructure;
 
-public sealed class PixPaymentService(ZyvenDbContext db, IPaymentProcessor provider, PaymentFeePolicy fees, TimeProvider time, PushinPayCredentialVault credentialVault, Microsoft.Extensions.Options.IOptions<PushinPayOptions> configured)
+public sealed class PixPaymentService(ZyvenDbContext db, IPaymentProcessor provider, PaymentFeePolicy fees, TimeProvider time, PushinPayCredentialVault credentialVault, PixRecoveryScheduler recovery, Microsoft.Extensions.Options.IOptions<PushinPayOptions> configured)
 {
     private readonly PushinPayOptions options = configured.Value;
     public async Task<PixPaymentResponse> Create(Guid checkoutId, string? secret, CancellationToken ct)
@@ -38,6 +38,7 @@ public sealed class PixPaymentService(ZyvenDbContext db, IPaymentProcessor provi
         if (result.State is not null)
         {
             payment.AttachPix("PUSHINPAY", result.State.ProviderTransactionId, result.State.QrCodeData, result.State.PixCode ?? throw new InvalidOperationException("PushinPay did not return a PIX code."), result.State.ExpiresAt ?? payment.ExpiresAt, time.GetUtcNow());
+            await recovery.Schedule(payment, ct);
             await db.SaveChangesAsync(ct); return Response(payment);
         }
         if (result.Error == PaymentOperationError.Rejected) { payment.Fail(time.GetUtcNow()); await db.SaveChangesAsync(ct); throw new OrganizationException(422, "A PushinPay rejeitou a criação desta cobrança PIX."); }

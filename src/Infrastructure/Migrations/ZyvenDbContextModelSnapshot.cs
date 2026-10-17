@@ -234,6 +234,79 @@ namespace Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Zyven.Domain.BotCheckoutBinding", b =>
+                {
+                    b.Property<Guid>("CheckoutId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TelegramIntegrationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("TelegramUserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("CheckoutId");
+
+                    b.HasIndex("TelegramIntegrationId");
+
+                    b.ToTable("BotCheckoutBindings");
+                });
+
+            modelBuilder.Entity("Zyven.Domain.BotCheckoutReference", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CheckoutId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ConsumedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Hash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("OfferId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TelegramIntegrationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("TelegramUserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.HasIndex("Hash")
+                        .IsUnique();
+
+                    b.HasIndex("TelegramIntegrationId");
+
+                    b.HasIndex("OfferId", "OrganizationId");
+
+                    b.ToTable("BotCheckoutReferences");
+                });
+
             modelBuilder.Entity("Zyven.Domain.BuyerAccessCode", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1283,6 +1356,188 @@ namespace Infrastructure.Migrations
                     b.ToTable("PaymentWebhookEvents");
                 });
 
+            modelBuilder.Entity("Zyven.Domain.PixRecoveryAttempt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ExecutionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("SentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int>("TryCount")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExecutionId", "OrganizationId");
+
+                    b.HasIndex("ExecutionId", "Position")
+                        .IsUnique();
+
+                    b.ToTable("PixRecoveryAttempts");
+                });
+
+            modelBuilder.Entity("Zyven.Domain.PixRecoveryConfiguration", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("OfferId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("PublishedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("PublishedVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OfferId", "OrganizationId");
+
+                    b.HasIndex("OrganizationId", "OfferId")
+                        .IsUnique();
+
+                    b.ToTable("PixRecoveryConfigurations");
+                });
+
+            modelBuilder.Entity("Zyven.Domain.PixRecoveryExecution", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ConfigurationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("CurrentPosition")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("NextRunAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PaymentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PaymentId")
+                        .IsUnique();
+
+                    b.HasIndex("ConfigurationId", "OrganizationId");
+
+                    b.HasIndex("PaymentId", "OrganizationId");
+
+                    b.HasIndex("Status", "NextRunAt");
+
+                    b.ToTable("PixRecoveryExecutions");
+                });
+
+            modelBuilder.Entity("Zyven.Domain.PixRecoveryMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ConfigurationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DelayMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("EmailText")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TelegramText")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConfigurationId", "OrganizationId");
+
+                    b.HasIndex("ConfigurationId", "Version", "Position")
+                        .IsUnique();
+
+                    b.ToTable("PixRecoveryMessages");
+                });
+
             modelBuilder.Entity("Zyven.Domain.Product", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1574,6 +1829,37 @@ namespace Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Zyven.Domain.BotCheckoutBinding", b =>
+                {
+                    b.HasOne("Zyven.Domain.CheckoutSession", null)
+                        .WithOne()
+                        .HasForeignKey("Zyven.Domain.BotCheckoutBinding", "CheckoutId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Zyven.Domain.TelegramIntegration", null)
+                        .WithMany()
+                        .HasForeignKey("TelegramIntegrationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Zyven.Domain.BotCheckoutReference", b =>
+                {
+                    b.HasOne("Zyven.Domain.TelegramIntegration", null)
+                        .WithMany()
+                        .HasForeignKey("TelegramIntegrationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Zyven.Domain.Offer", null)
+                        .WithMany()
+                        .HasForeignKey("OfferId", "OrganizationId")
+                        .HasPrincipalKey("Id", "OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Zyven.Domain.CheckoutSession", b =>
                 {
                     b.HasOne("Zyven.Domain.Customer", null)
@@ -1813,6 +2099,53 @@ namespace Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("PaymentId")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Zyven.Domain.PixRecoveryAttempt", b =>
+                {
+                    b.HasOne("Zyven.Domain.PixRecoveryExecution", null)
+                        .WithMany()
+                        .HasForeignKey("ExecutionId", "OrganizationId")
+                        .HasPrincipalKey("Id", "OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Zyven.Domain.PixRecoveryConfiguration", b =>
+                {
+                    b.HasOne("Zyven.Domain.Offer", null)
+                        .WithMany()
+                        .HasForeignKey("OfferId", "OrganizationId")
+                        .HasPrincipalKey("Id", "OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Zyven.Domain.PixRecoveryExecution", b =>
+                {
+                    b.HasOne("Zyven.Domain.PixRecoveryConfiguration", null)
+                        .WithMany()
+                        .HasForeignKey("ConfigurationId", "OrganizationId")
+                        .HasPrincipalKey("Id", "OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Zyven.Domain.Payment", null)
+                        .WithMany()
+                        .HasForeignKey("PaymentId", "OrganizationId")
+                        .HasPrincipalKey("Id", "OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Zyven.Domain.PixRecoveryMessage", b =>
+                {
+                    b.HasOne("Zyven.Domain.PixRecoveryConfiguration", null)
+                        .WithMany()
+                        .HasForeignKey("ConfigurationId", "OrganizationId")
+                        .HasPrincipalKey("Id", "OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Zyven.Domain.Product", b =>

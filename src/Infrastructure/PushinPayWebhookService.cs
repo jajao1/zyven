@@ -9,7 +9,7 @@ namespace Zyven.Infrastructure;
 
 public enum WebhookApplyResult { Applied, Duplicate, Ignored, Rejected }
 
-public sealed class PushinPayWebhookService(ZyvenDbContext db, IPaymentProcessor provider, PushinPayCredentialVault credentialVault, LedgerService ledger, FulfillmentService fulfillment, TimeProvider time)
+public sealed class PushinPayWebhookService(ZyvenDbContext db, IPaymentProcessor provider, PushinPayCredentialVault credentialVault, LedgerService ledger, FulfillmentService fulfillment, PixRecoveryScheduler recovery, TimeProvider time)
 {
     public async Task<WebhookApplyResult> Apply(Guid merchantId, string secret, byte[] payload, CancellationToken ct)
     {
@@ -60,6 +60,7 @@ public sealed class PushinPayWebhookService(ZyvenDbContext db, IPaymentProcessor
             payment.ConfirmPaid(state.EndToEndId, state.GrossAmount, state.PaidAt ?? time.GetUtcNow());
             var checkout = await db.Checkouts.SingleAsync(x => x.Id == payment.CheckoutSessionId && x.OrganizationId == payment.OrganizationId, ct);
             checkout.Status = "COMPLETED";
+            await recovery.CompletePaid(payment.Id, ct);
             await ledger.PostCapturedPayment(payment, ct);
             await fulfillment.FulfillPaidPayment(payment, ct);
             return await Finish(evt, WebhookApplyResult.Applied, transaction, ct);

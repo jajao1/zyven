@@ -7,7 +7,7 @@ using Zyven.Application;
 using Zyven.Domain;
 namespace Zyven.Infrastructure;
 
-public sealed class PublicCheckoutService(ZyvenDbContext db, TenantAuthorization tenants, CustomerService customers, TimeProvider time)
+public sealed class PublicCheckoutService(ZyvenDbContext db, TenantAuthorization tenants, CustomerService customers, BotCheckoutReferenceService botReferences, TimeProvider time)
 {
     private static string Serialize<T>(T value) => JsonSerializer.Serialize(value);
     private static T Deserialize<T>(string value) => JsonSerializer.Deserialize<T>(value)!;
@@ -55,6 +55,7 @@ public sealed class PublicCheckoutService(ZyvenDbContext db, TenantAuthorization
         var secret = Convert.ToHexString(RandomNumberGenerator.GetBytes(48));
         var session = new CheckoutSession { OrganizationId = offer.OrganizationId, OfferId = offer.Id, AccessHash = Hash(secret), Price = offer.Price, Currency = offer.Currency, CreatedAt = time.GetUtcNow(), ExpiresAt = time.GetUtcNow().AddMinutes(30), FormJson = Serialize(page.Fields) };
         session.CustomerId = await customers.Resolve(session.OrganizationId, input, ct);
+        await botReferences.Bind(input.RecoveryReference, session, ct);
         SetInput(session, input); db.Checkouts.Add(session); await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
         return (Response(session, offer.Slug), secret);
     }
