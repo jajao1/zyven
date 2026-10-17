@@ -107,4 +107,6 @@ Clientes, normalização e proteção de perfil: [docs/customers.md](docs/custom
 
 Funil configurável de mensagens Telegram: [docs/automations.md](docs/automations.md).
 
+Lembretes automáticos para PIX pendente: [docs/pix-recovery.md](docs/pix-recovery.md).
+
 A base de pagamentos inclui MerchantAccount, taxas fixas configuráveis, tokens PushinPay cifrados e restrições financeiras/tenant no banco. Sem configuração, o processador retorna indisponível de forma segura. Escopo e dependências: [docs/payment-foundation.md](docs/payment-foundation.md). Smoke local: `./scripts/smoke-payment-foundation.ps1`.
