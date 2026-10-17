@@ -2,7 +2,7 @@ import { ApiError, authorizedFormRequest, authorizedRequest } from './auth-clien
 export interface CheckoutField { key: string; label: string; type: 'text' | 'textarea'; required: boolean }
 export interface PageContent { title: string; subtitle: string; imageUrl?: string | null; videoUrl?: string | null; logoUrl?: string | null; color: string; description: string; benefits: string[]; testimonials: { name: string; text: string }[]; faq: { question: string; answer: string }[]; guarantee: string; cta: string; fields: CheckoutField[] }
 export interface PublicOffer { slug: string; name: string; productName: string; price: string; currency: string; billingType: string; page: PageContent }
-export interface BuyerInput { name: string; email: string; phone: string; document: string; fields: Record<string, string> }
+export interface BuyerInput { name: string; email: string; phone: string; document: string; fields: Record<string, string>; recoveryReference?: string | null }
 export interface Checkout { id: string; offerSlug: string; status: string; price: string; currency: string; expiresAt: string; name: string; email: string; phone?: string; document?: string; fields: Record<string, string> }
 export interface PixPayment { id: string; status: string; amount: string; currency: string; pixCode?: string | null; qrCodeData?: string | null; expiresAt: string; paidAt?: string | null }
 export interface Delivery { entitlementId: string; status: string; items: { id: string; type: string; name: string; url: string; deliveredAt: string }[] }

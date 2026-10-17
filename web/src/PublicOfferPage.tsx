@@ -11,7 +11,7 @@ import { Label } from './components/ui/label'
 const buyerSchema = z.object({ name: z.string().trim().min(2, 'Informe seu nome completo.').max(200), email: z.string().trim().email('Informe um email válido.').max(254), phone: z.string().max(30).refine(value => !value.trim() || /^\+[1-9][0-9]{6,14}$/.test(value.trim().replace(/[ ()-]/g, '')), 'Informe o telefone com + e código do país.'), document: z.string().regex(/^\D*(?:\d\D*){11}(?:(?:\d\D*){3})?$/, 'Informe um CPF ou CNPJ válido.').max(40), fields: z.record(z.string(), z.string().max(1000)) })
 function CheckoutForm({ offer, complete }: { offer: PublicOffer; complete: (value: Checkout) => void }) {
   const form = useForm<BuyerInput>({ resolver: zodResolver(buyerSchema), defaultValues: { name: '', email: '', phone: '', document: '', fields: {} } })
-  const mutation = useMutation({ mutationFn: (data: BuyerInput) => pageClient.create(offer.slug, data), onSuccess: complete })
+  const mutation = useMutation({ mutationFn: (data: BuyerInput) => pageClient.create(offer.slug, { ...data, recoveryReference: new URLSearchParams(window.location.search).get('r') }), onSuccess: complete })
   return <form className="catalog-form" onSubmit={form.handleSubmit(data => mutation.mutate(data))} aria-label="Seus dados"><p className="eyebrow">Checkout</p><h2>Seus dados</h2><p className="section-copy">Confira a oferta e informe seus dados para continuar.</p>
     <div className="field"><Label htmlFor="buyer-name">Nome completo</Label><Input id="buyer-name" autoComplete="name" maxLength={200} {...form.register('name')} /></div>
     <div className="field"><Label htmlFor="buyer-email">Email</Label><Input id="buyer-email" type="email" autoComplete="email" maxLength={254} {...form.register('email')} /></div>

@@ -6,6 +6,7 @@ import { Button } from './components/ui/button'
 import { Input } from './components/ui/input'
 import { Label } from './components/ui/label'
 import { ApiError } from './lib/auth-client'
+import { PixRecoveryEditor } from './PixRecoveryEditor'
 type LinkForm = { name: string; url: string }
 function FulfillmentEditor({ org, offer }: { org: string; offer: string }) {
   const current = useQuery({ queryKey: ['organizations', org, 'external-link', offer], queryFn: () => pageClient.externalLink(org, offer), retry: false })
@@ -94,5 +95,6 @@ export function OfferPageEditor({ org, offer, userId, slug }: { org: string; off
   const [open, setOpen] = useState(false)
   const [deliveryOpen, setDeliveryOpen] = useState(false)
   const [automationOpen, setAutomationOpen] = useState(false)
-  return <section className="page-editor-section"><div className="catalog-actions"><Button variant="outline" onClick={() => setOpen(!open)}>{open ? 'Fechar editor da página' : 'Editar página pública'}</Button><Button variant="outline" onClick={() => setDeliveryOpen(!deliveryOpen)}>{deliveryOpen ? 'Fechar entrega' : 'Configurar entrega'}</Button><Button variant="outline" onClick={() => setAutomationOpen(!automationOpen)}>{automationOpen ? 'Fechar funil' : 'Editar funil de mensagens'}</Button><a href={`/o/${encodeURIComponent(slug)}`} target="_blank" rel="noopener noreferrer">Ver página pública</a></div>{open && <LoadedPageEditor org={org} offer={offer} userId={userId} />}{deliveryOpen && <><FulfillmentEditor org={org} offer={offer} /><DigitalFileEditor org={org} offer={offer} /><TelegramEditor org={org} offer={offer} /></>}{automationOpen && <AutomationEditor org={org} offer={offer} />}</section>
+  const [recoveryOpen, setRecoveryOpen] = useState(false)
+  return <section className="page-editor-section"><div className="catalog-actions"><Button variant="outline" onClick={() => setOpen(!open)}>{open ? 'Fechar editor da página' : 'Editar página pública'}</Button><Button variant="outline" onClick={() => setDeliveryOpen(!deliveryOpen)}>{deliveryOpen ? 'Fechar entrega' : 'Configurar entrega'}</Button><Button variant="outline" onClick={() => setAutomationOpen(!automationOpen)}>{automationOpen ? 'Fechar funil' : 'Editar funil de mensagens'}</Button><Button variant="outline" onClick={() => setRecoveryOpen(!recoveryOpen)}>{recoveryOpen ? 'Fechar recuperação' : 'Recuperação de PIX'}</Button><a href={`/o/${encodeURIComponent(slug)}`} target="_blank" rel="noopener noreferrer">Ver página pública</a></div>{open && <LoadedPageEditor org={org} offer={offer} userId={userId} />}{deliveryOpen && <><FulfillmentEditor org={org} offer={offer} /><DigitalFileEditor org={org} offer={offer} /><TelegramEditor org={org} offer={offer} /></>}{automationOpen && <AutomationEditor org={org} offer={offer} />}{recoveryOpen&&<PixRecoveryEditor org={org} offer={offer}/>}</section>
 }
