@@ -1,7 +1,7 @@
 param([string]$BaseUrl = 'http://localhost:8088')
 $ErrorActionPreference = 'Stop'
 
-# Development-only foundation check. No provider is configured at this stage.
+# Development-only foundation check. No merchant token is configured at this stage.
 function Read-FoundationCount([string]$Query) {
     $value = $Query | docker compose exec -T postgres psql -U zyven -d zyven -At -v ON_ERROR_STOP=1
     if ($LASTEXITCODE -ne 0) { throw 'Could not inspect the local payment foundation.' }

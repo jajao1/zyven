@@ -1,0 +1,4 @@
+import { authorizedRequest } from './auth-client'
+export interface PixRecoveryMessage { position?: number; delayMinutes: number; emailText: string; telegramText: string }
+export interface PixRecovery { id: string; enabled: boolean; publishedVersion: number; publishedAt?: string | null; messages: PixRecoveryMessage[] }
+export const pixRecoveryClient = { get: (org:string,offer:string)=>authorizedRequest<PixRecovery>(`/api/organizations/${org}/offers/${offer}/pix-recovery`), save:(org:string,offer:string,enabled:boolean,messages:PixRecoveryMessage[])=>authorizedRequest<PixRecovery>(`/api/organizations/${org}/offers/${offer}/pix-recovery`,{enabled,messages},'PUT'), publish:(org:string,offer:string)=>authorizedRequest<PixRecovery>(`/api/organizations/${org}/offers/${offer}/pix-recovery/publish`,undefined,'POST') }

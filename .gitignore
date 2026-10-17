@@ -14,3 +14,6 @@
 work/
 playwright-report/
 test-results/
+
+.worktrees/
+.superpowers/

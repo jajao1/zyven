@@ -4,8 +4,27 @@ namespace Zyven.Infrastructure;
 
 public sealed class ZyvenDbContext(DbContextOptions<ZyvenDbContext> options) : DbContext(options)
 {
+    public DbSet<PixRecoveryConfiguration> PixRecoveryConfigurations => Set<PixRecoveryConfiguration>(); public DbSet<PixRecoveryMessage> PixRecoveryMessages => Set<PixRecoveryMessage>(); public DbSet<PixRecoveryExecution> PixRecoveryExecutions => Set<PixRecoveryExecution>(); public DbSet<PixRecoveryAttempt> PixRecoveryAttempts => Set<PixRecoveryAttempt>();
+    public DbSet<BotCheckoutReference> BotCheckoutReferences => Set<BotCheckoutReference>();
+    public DbSet<BotCheckoutBinding> BotCheckoutBindings => Set<BotCheckoutBinding>();
+    public DbSet<Automation> Automations => Set<Automation>();
+    public DbSet<AutomationStep> AutomationSteps => Set<AutomationStep>();
+    public DbSet<AutomationExecution> AutomationExecutions => Set<AutomationExecution>();
+    public DbSet<TelegramIntegration> TelegramIntegrations => Set<TelegramIntegration>();
+    public DbSet<TelegramLinkToken> TelegramLinkTokens => Set<TelegramLinkToken>();
+    public DbSet<TelegramAccessGrant> TelegramAccessGrants => Set<TelegramAccessGrant>();
+    public DbSet<BuyerAccessCode> BuyerAccessCodes => Set<BuyerAccessCode>();
+    public DbSet<BuyerSession> BuyerSessions => Set<BuyerSession>();
+    public DbSet<DigitalAsset> DigitalAssets => Set<DigitalAsset>();
     public DbSet<MerchantAccount> MerchantAccounts => Set<MerchantAccount>();
     public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<PaymentWebhookEvent> PaymentWebhookEvents => Set<PaymentWebhookEvent>();
+    public DbSet<LedgerAccount> LedgerAccounts => Set<LedgerAccount>();
+    public DbSet<LedgerTransaction> LedgerTransactions => Set<LedgerTransaction>();
+    public DbSet<LedgerEntry> LedgerEntries => Set<LedgerEntry>();
+    public DbSet<FulfillmentDefinition> FulfillmentDefinitions => Set<FulfillmentDefinition>();
+    public DbSet<Entitlement> Entitlements => Set<Entitlement>();
+    public DbSet<FulfillmentExecution> FulfillmentExecutions => Set<FulfillmentExecution>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<OfferPage> OfferPages => Set<OfferPage>();
     public DbSet<CheckoutSession> Checkouts => Set<CheckoutSession>();
@@ -20,8 +39,19 @@ public sealed class ZyvenDbContext(DbContextOptions<ZyvenDbContext> options) : D
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     protected override void OnModelCreating(ModelBuilder b)
     {
+        b.ApplyConfiguration(new PixRecoveryConfigurationMap()); b.ApplyConfiguration(new PixRecoveryMessageMap()); b.ApplyConfiguration(new PixRecoveryExecutionMap()); b.ApplyConfiguration(new PixRecoveryAttemptMap());
+        b.ApplyConfiguration(new BotCheckoutReferenceMap());
+        b.ApplyConfiguration(new BotCheckoutBindingMap());
+        b.ApplyConfiguration(new AutomationConfiguration()); b.ApplyConfiguration(new AutomationStepConfiguration()); b.ApplyConfiguration(new AutomationExecutionConfiguration());
+        b.ApplyConfiguration(new TelegramIntegrationConfiguration()); b.ApplyConfiguration(new TelegramLinkTokenConfiguration()); b.ApplyConfiguration(new TelegramAccessGrantConfiguration());
+        b.ApplyConfiguration(new BuyerAccessCodeConfiguration());
+        b.ApplyConfiguration(new BuyerSessionConfiguration());
+        b.ApplyConfiguration(new DigitalAssetConfiguration());
         b.ApplyConfiguration(new MerchantAccountConfiguration());
         b.ApplyConfiguration(new PaymentConfiguration());
+        b.ApplyConfiguration(new PaymentWebhookEventConfiguration());
+        b.ApplyConfiguration(new LedgerAccountConfiguration()); b.ApplyConfiguration(new LedgerTransactionConfiguration()); b.ApplyConfiguration(new LedgerEntryConfiguration());
+        b.ApplyConfiguration(new FulfillmentDefinitionConfiguration()); b.ApplyConfiguration(new EntitlementConfiguration()); b.ApplyConfiguration(new FulfillmentExecutionConfiguration());
         b.ApplyConfiguration(new CustomerConfiguration());
         b.ApplyConfiguration(new OfferPageConfiguration());
         b.ApplyConfiguration(new CheckoutConfiguration());

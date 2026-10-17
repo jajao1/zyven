@@ -18,6 +18,7 @@ try {
     $env:Jwt__SigningKey = $values.JWT_SIGNING_KEY
     $env:Jwt__Issuer = 'Zyven'
     $env:Jwt__Audience = 'Zyven.Web'
+    $env:Payments__CredentialEncryptionKey = $values.PAYMENT_CREDENTIAL_ENCRYPTION_KEY
     $env:Cors__AllowedOrigins__0 = 'http://localhost:8088'
     $env:ASPNETCORE_ENVIRONMENT = 'Development'
     dotnet build Zyven.slnx --configuration Release
@@ -46,6 +47,6 @@ try {
 } finally {
     # This project is created exclusively for this test run; application volumes are untouched.
     docker compose -p zyven-tests down -v
-    @('POSTGRES_PORT','REDIS_PORT','DOCKER_SUBNET','DOCKER_PROXY_IP','ConnectionStrings__Database','ConnectionStrings__Redis','Jwt__SigningKey','Jwt__Issuer','Jwt__Audience','Cors__AllowedOrigins__0','ASPNETCORE_ENVIRONMENT') | ForEach-Object { Remove-Item "Env:$_" -ErrorAction SilentlyContinue }
+    @('POSTGRES_PORT','REDIS_PORT','DOCKER_SUBNET','DOCKER_PROXY_IP','ConnectionStrings__Database','ConnectionStrings__Redis','Jwt__SigningKey','Jwt__Issuer','Jwt__Audience','Payments__CredentialEncryptionKey','Cors__AllowedOrigins__0','ASPNETCORE_ENVIRONMENT') | ForEach-Object { Remove-Item "Env:$_" -ErrorAction SilentlyContinue }
     Pop-Location
 }
